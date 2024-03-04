@@ -1,11 +1,14 @@
-package com.example.passwordmanager.presentation
+package com.example.passwordmanager.presentation.HomeScreen
 
+import android.os.Build
+import androidx.annotation.RequiresApi
+import androidx.biometric.BiometricManager
+import androidx.biometric.BiometricPrompt
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -20,7 +23,6 @@ import androidx.compose.material.icons.rounded.FavoriteBorder
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.LockOpen
 import androidx.compose.material.icons.rounded.Sort
-import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -34,15 +36,20 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.fragment.app.FragmentActivity
 import androidx.navigation.NavController
+import com.example.passwordmanager.presentation.CredentialEvent
+import com.example.passwordmanager.presentation.CredentialState
+import com.example.passwordmanager.util.BiometricPromptUtils
 import com.example.passwordmanager.util.CryptoManager
 
 val cryptoManager = CryptoManager()
 
+@RequiresApi(Build.VERSION_CODES.P)
 @Composable
 fun CredentialScreen(
     state: CredentialState,
@@ -52,6 +59,7 @@ fun CredentialScreen(
     var lockState by remember {
         mutableStateOf(false)
     }
+    val context = LocalContext.current as FragmentActivity
     Scaffold (
         topBar = {
             Row (modifier = Modifier
@@ -66,7 +74,16 @@ fun CredentialScreen(
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.primary
                 )
-                IconButton(onClick = { lockState = !lockState }) {
+                IconButton(onClick = {
+                    if(lockState){
+                        lockState = !lockState
+                    } else {
+                        showBiometricForAuthentication(context) {
+                            lockState = !lockState
+                        }
+                    }
+                }) {
+
                     if( !lockState ){
                         Icon(imageVector = Icons.Rounded.Lock, contentDescription = null, modifier = Modifier.size(35.dp), tint = MaterialTheme.colorScheme.secondary)
                     } else {
@@ -93,7 +110,7 @@ fun CredentialScreen(
 }
 
 @Composable
-fun CredentialItem(state: CredentialState, index: Int, lockState: Boolean,onEvent: (CredentialEvent) -> Unit) {
+fun CredentialItem(state: CredentialState, index: Int, lockState: Boolean, onEvent: (CredentialEvent) -> Unit) {
     Row(modifier= Modifier
         .fillMaxWidth()
         .clip(RoundedCornerShape(10.dp))
@@ -111,11 +128,17 @@ fun CredentialItem(state: CredentialState, index: Int, lockState: Boolean,onEven
             }
         }
         Row(){
-            IconButton(onClick = { onEvent(CredentialEvent.DeleteCredential(state.credentials.get(index = index)))}) {
+            IconButton(onClick = { onEvent(
+                CredentialEvent.DeleteCredential(
+                    state.credentials.get(
+                        index = index
+                    )
+                )
+            )}) {
                 Icon(imageVector = Icons.Rounded.Lock, contentDescription=null, modifier = Modifier.size(24.dp))
             }
                 IconButton(onClick = {
-                    onEvent( CredentialEvent.FavoriteCredential( state.credentials.get( index = index ) ) )
+                    onEvent(CredentialEvent.FavoriteCredential(state.credentials.get(index = index)))
                 }) {
                     if( state.credentials.get(index = index).isFav ) {
                         Icon(imageVector = Icons.Rounded.Favorite, contentDescription = null, modifier = Modifier.size(24.dp)
@@ -125,10 +148,41 @@ fun CredentialItem(state: CredentialState, index: Int, lockState: Boolean,onEven
                     }
                 }
 
-            IconButton(onClick = { onEvent(CredentialEvent.DeleteCredential(state.credentials.get(index = index)))}) {
+            IconButton(onClick = { onEvent(
+                CredentialEvent.DeleteCredential(
+                    state.credentials.get(
+                        index = index
+                    )
+                )
+            )}) {
                 Icon(imageVector = Icons.Rounded.Delete, contentDescription=null, modifier = Modifier.size(24.dp))
             }
         }
 
     }
+}
+
+
+// BIOMETRICS SECTION
+@RequiresApi(Build.VERSION_CODES.P)
+private fun showBiometricForAuthentication(activity: FragmentActivity, onSucess: ()->Unit) {
+
+    lateinit var biometricPrompt: BiometricPrompt
+    val canAuthenticate = BiometricManager.from(activity).canAuthenticate()
+    if (canAuthenticate == BiometricManager.BIOMETRIC_SUCCESS) {
+        biometricPrompt =
+            BiometricPromptUtils.createBiometricPrompt(
+                activity
+            ){
+                println("biometric success ${it.authenticationType}")
+                onSucess()
+            }
+        val promptInfo = BiometricPromptUtils.createPromptInfo()
+        biometricPrompt.authenticate(promptInfo)
+
+    } else {
+        println("Sorry cannot use authentication")
+//            activity.toast("failed")
+    }
+
 }

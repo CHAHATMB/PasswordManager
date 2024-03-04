@@ -14,4 +14,7 @@ sealed interface CredentialEvent {
     ): CredentialEvent
 
     data class FavoriteCredential(var credential: Credential): CredentialEvent
+
+    data class OnSearchTextChange(var text: String): CredentialEvent
+    data object OnToogleSearch : CredentialEvent
 }
