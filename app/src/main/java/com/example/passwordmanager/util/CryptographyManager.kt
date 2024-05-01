@@ -40,6 +40,7 @@ interface CryptographyManager {
         prefKey: String
     ): CiphertextWrapper?
 
+    fun decryptFromWraper() : String
 }
 
 fun CryptographyManager(): CryptographyManager = CryptographyManagerImpl()
@@ -97,6 +98,15 @@ private class CryptographyManagerImpl : CryptographyManager {
         }
     }
 
+    override fun decryptFromWraper(): String{
+        val keyName = "PiyushaKey"
+        val dataE = encryptData("My name is chahat and I am good", getInitializedCipherForEncryption(keyName))
+        val iv = dataE.initializationVector
+        println("Generated iv ${iv}")
+        val dataD = decryptData(dataE.ciphertext, getInitializedCipherForDecryption(keyName, iv))
+        println("Decrypted data - $dataD")
+        return dataD
+    }
     override fun decryptData(ciphertext: ByteArray, cipher: Cipher): String {
         val plaintext = cipher.doFinal(ciphertext)
         return String(plaintext, Charset.forName("UTF-8"))

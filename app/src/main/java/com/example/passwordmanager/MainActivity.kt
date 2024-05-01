@@ -60,6 +60,7 @@ import com.example.passwordmanager.presentation.FavoriteCredentialScreen
 import com.example.passwordmanager.presentation.NavigationItem
 import com.example.passwordmanager.ui.theme.PasswordManagerTheme
 import com.example.passwordmanager.ui.theme.shapes.BottomNavCustomShape
+import com.example.passwordmanager.util.CryptographyManager
 import kotlinx.coroutines.delay
 
 class MainActivity : FragmentActivity() {
@@ -185,7 +186,7 @@ class MainActivity : FragmentActivity() {
                 ) {
 
                     if( isSheetOpen )
-                    ModalBottomSheet(
+                        ModalBottomSheet(
                         sheetState = sheetState,
                         onDismissRequest = {
                             isSheetOpen = false
@@ -194,6 +195,7 @@ class MainActivity : FragmentActivity() {
                     ){
                         AddCredentialScreen(state = state, navController = navController, onEvent = viewModel::onEvent)
                     }
+
                    Box(modifier = Modifier.padding(it)){
                        AppNavigation(navController, state)
                    }
@@ -204,6 +206,7 @@ class MainActivity : FragmentActivity() {
                 }
             }
         }
+
     }
 
     @RequiresApi(Build.VERSION_CODES.P)
