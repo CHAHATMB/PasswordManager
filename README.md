@@ -21,9 +21,15 @@ Password Manager is a modern, secure Android password manager that helps you kee
 
 ## Screenshots
 
+### Light Theme
 | Home Screen                                            | Add Password                                                             | Favorites                                           | Unlock Screen                                              |
 |--------------------------------------------------------|--------------------------------------------------------------------------|-----------------------------------------------------|------------------------------------------------------------|
 | <img src="/screen_shot/home.png" alt="Home Screen" width="200" /> | <img src="/screen_shot/add_screen.png" alt="Add Password" width="200" /> | <img src="/screen_shot/fav.png" alt="Favorites" width="200" /> | <img src="/screen_shot/unlock.png" width="200" alt="Unlock Screen" /> |
+
+### Dark Theme
+| Home Screen                                                            | Add Password                                                                  | Favorites                                                           | Unlock Screen                                                              |
+|------------------------------------------------------------------------|-------------------------------------------------------------------------------|---------------------------------------------------------------------|----------------------------------------------------------------------------|
+| <img src="/screen_shot/home_dark.png" alt="Home Screen" width="200" /> | <img src="/screen_shot/add_screen_dark.png" alt="Add Password" width="200" /> | <img src="/screen_shot/fav_dark.png" alt="Favorites" width="200" /> | <img src="/screen_shot/unlock_dark.png" width="200" alt="Unlock Screen" /> |
 
 
 ## Installation
