@@ -10,6 +10,7 @@ import com.example.passwordmanager.data.crypto.Argon2KeyDerivation
 import com.example.passwordmanager.data.crypto.BiometricKeyStore
 import com.example.passwordmanager.data.crypto.KdfParams
 import com.example.passwordmanager.data.crypto.VaultCrypto
+import com.example.passwordmanager.data.notes.NoteRepository
 import com.example.passwordmanager.data.settings.SettingsStore
 import com.example.passwordmanager.data.totp.TotpRepository
 import com.example.passwordmanager.data.vault.UnlockThrottle
@@ -57,6 +58,8 @@ class AppContainer(context: Context) {
     val credentialRepository = CredentialRepository(vaultSession)
 
     val totpRepository = TotpRepository(vaultSession)
+
+    val noteRepository = NoteRepository(vaultSession)
 
     val backupRepository = BackupRepository(
         contentResolver = appContext.contentResolver,
