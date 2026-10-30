@@ -32,6 +32,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -52,8 +53,10 @@ import com.example.passwordmanager.presentation.components.ItemRow
 import com.example.passwordmanager.presentation.components.SearchField
 import com.example.passwordmanager.presentation.components.showCopiedMessage
 import com.example.passwordmanager.ui.theme.Spacing
+import kotlinx.coroutines.delay
 
 const val PASSWORD_MASK = "••••••••"
+private const val PASSWORD_REVEAL_TIMEOUT_MS = 30_000L
 
 @Composable
 fun CredentialScreen(
@@ -186,6 +189,12 @@ private fun CredentialList(credentials: List<Credential>, navController: NavCont
 @Composable
 private fun CredentialItem(credential: Credential, onEvent: (CredentialEvent) -> Unit, onClick: () -> Unit) {
     var isPasswordRevealed by remember(credential.id) { mutableStateOf(false) }
+    LaunchedEffect(isPasswordRevealed) {
+        if (isPasswordRevealed) {
+            delay(PASSWORD_REVEAL_TIMEOUT_MS)
+            isPasswordRevealed = false
+        }
+    }
     var isMenuOpen by remember { mutableStateOf(false) }
     val context = LocalContext.current
     ItemRow(
@@ -202,11 +211,10 @@ private fun CredentialItem(credential: Credential, onEvent: (CredentialEvent) ->
         }) {
             Icon(imageVector = Icons.Rounded.ContentCopy, contentDescription = "Copy password")
         }
-        IconButton(onClick = { onEvent(CredentialEvent.FavoriteCredential(credential)) }) {
+        IconButton(onClick = { isPasswordRevealed = !isPasswordRevealed }) {
             Icon(
-                imageVector = if (credential.isFav) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
-                contentDescription = if (credential.isFav) "Remove from favourites" else "Add to favourites",
-                tint = if (credential.isFav) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                imageVector = if (isPasswordRevealed) Icons.Rounded.VisibilityOff else Icons.Rounded.Visibility,
+                contentDescription = if (isPasswordRevealed) "Hide password" else "Show password"
             )
         }
         Box {
@@ -215,16 +223,16 @@ private fun CredentialItem(credential: Credential, onEvent: (CredentialEvent) ->
             }
             DropdownMenu(expanded = isMenuOpen, onDismissRequest = { isMenuOpen = false }) {
                 DropdownMenuItem(
-                    text = { Text(text = if (isPasswordRevealed) "Hide password" else "Show password") },
+                    text = { Text(text = if (credential.isFav) "Remove from favourites" else "Add to favourites") },
                     leadingIcon = {
                         Icon(
-                            imageVector = if (isPasswordRevealed) Icons.Rounded.VisibilityOff else Icons.Rounded.Visibility,
+                            imageVector = if (credential.isFav) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
                             contentDescription = null
                         )
                     },
                     onClick = {
-                        isPasswordRevealed = !isPasswordRevealed
                         isMenuOpen = false
+                        onEvent(CredentialEvent.FavoriteCredential(credential))
                     }
                 )
                 DropdownMenuItem(
