@@ -1,6 +1,7 @@
 package com.example.passwordmanager.presentation.HomeScreen
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -46,11 +47,12 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.passwordmanager.data.Credential
 import com.example.passwordmanager.presentation.CredentialEvent
+import com.example.passwordmanager.presentation.CredentialRoutes
 import com.example.passwordmanager.presentation.CredentialState
 import com.example.passwordmanager.presentation.NavigationItem
 import com.example.passwordmanager.presentation.components.showCopiedMessage
 
-private const val PASSWORD_MASK = "••••••••"
+const val PASSWORD_MASK = "••••••••"
 
 @Composable
 fun CredentialScreen(
@@ -96,7 +98,11 @@ fun CredentialScreen(
             verticalArrangement =  Arrangement.spacedBy(16.dp)
         ){
             items(state.credentials, key = { credential -> credential.id }) { credential ->
-                CredentialItem(credential = credential, onEvent = onEvent)
+                CredentialItem(
+                    credential = credential,
+                    onEvent = onEvent,
+                    onClick = { navController.navigate(CredentialRoutes.detail(credential.id)) }
+                )
             }
         }
     }
@@ -125,12 +131,13 @@ private fun SearchField(text: String, onTextChange: (String) -> Unit) {
 }
 
 @Composable
-fun CredentialItem(credential: Credential, onEvent: (CredentialEvent) -> Unit) {
+fun CredentialItem(credential: Credential, onEvent: (CredentialEvent) -> Unit, onClick: () -> Unit) {
     var isPasswordRevealed by remember(credential.id) { mutableStateOf(false) }
     val context = LocalContext.current
     Row(modifier= Modifier
         .fillMaxWidth()
         .clip(RoundedCornerShape(10.dp))
+        .clickable(onClick = onClick)
         .background(MaterialTheme.colorScheme.secondaryContainer)
         .padding(12.dp)
     ){

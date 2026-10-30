@@ -59,7 +59,11 @@ fun FavoriteCredentialScreen(
             verticalArrangement =  Arrangement.spacedBy(16.dp)
         ){
             items(state.credentials, key = { credential -> credential.id }) { credential ->
-                CredentialItem(credential = credential, onEvent = onEvent)
+                CredentialItem(
+                    credential = credential,
+                    onEvent = onEvent,
+                    onClick = { navController.navigate(CredentialRoutes.detail(credential.id)) }
+                )
             }
         }
     }

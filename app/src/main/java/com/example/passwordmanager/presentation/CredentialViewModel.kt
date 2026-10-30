@@ -11,6 +11,7 @@ import com.example.passwordmanager.data.CredentialRepository
 import com.example.passwordmanager.data.vault.VaultException
 import com.example.passwordmanager.util.SecureClipboard
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
@@ -40,6 +41,8 @@ class CredentialViewModel(
         .flatMapLatest { repository.getFavorites(it) }
         .map { CredentialState(credentials = it) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), CredentialState())
+
+    fun credential(id: Int): Flow<Credential?> = repository.getById(id)
 
     fun onEvent( event: CredentialEvent ){
         when(event){

@@ -48,12 +48,17 @@ import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.withResumed
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.example.passwordmanager.data.vault.VaultState
 import com.example.passwordmanager.presentation.AddScreen.AddCredentialScreen
+import com.example.passwordmanager.presentation.DetailScreen.CredentialDetailScreen
 import com.example.passwordmanager.presentation.HomeScreen.CredentialScreen
+import com.example.passwordmanager.presentation.CredentialEvent
+import com.example.passwordmanager.presentation.CredentialRoutes
 import com.example.passwordmanager.presentation.CredentialState
 import com.example.passwordmanager.presentation.CredentialViewModel
 import com.example.passwordmanager.presentation.FavoriteCredentialScreen
@@ -236,6 +241,27 @@ class MainActivity : FragmentActivity() {
                     navController = navController,
                     onEvent = viewModel::onEvent
                 )
+            }
+            composable(
+                CredentialRoutes.DETAIL,
+                arguments = listOf(navArgument(CredentialRoutes.ID_ARG) { type = NavType.IntType })
+            ) { entry ->
+                val id = entry.arguments?.getInt(CredentialRoutes.ID_ARG) ?: return@composable
+                val credential by remember(id) { viewModel.credential(id) }.collectAsState(initial = null)
+                // Guarded pop: a double tap on Back or Delete must not pop Home as well.
+                val close = { navController.popBackStack(CredentialRoutes.DETAIL, inclusive = true) }
+                credential?.let {
+                    CredentialDetailScreen(
+                        credential = it,
+                        onEvent = viewModel::onEvent,
+                        onBack = { close() },
+                        onEdit = { navController.navigate(CredentialRoutes.edit(id)) },
+                        onDelete = {
+                            viewModel.onEvent(CredentialEvent.DeleteCredential(it))
+                            close()
+                        }
+                    )
+                }
             }
             composable(NavigationItem.Settings.route) {
                 LaunchedEffect(Unit) { settingsViewModel.refresh() }
