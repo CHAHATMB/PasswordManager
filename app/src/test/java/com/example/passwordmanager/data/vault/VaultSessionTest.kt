@@ -125,12 +125,29 @@ class VaultSessionTest {
     }
 
     @Test
-    fun lockWhenNotUnlockedDoesNothing() {
+    fun lockWhenNotUnlockedDoesNothing() = runTest {
+        newSession().setup(password.toCharArray())
         val session = newSession()
 
         session.lock()
 
-        assertEquals(VaultState.NotSetUp, session.state.value)
+        assertEquals(VaultState.Locked, session.state.value)
+        session.unlock(password.toCharArray())
+        assertTrue("an earlier lock must not undo a later unlock", session.state.value is VaultState.Unlocked)
+    }
+
+    @Test
+    fun lockDuringUnlockLocksAgainOnceUnlockFinishes() = runTest {
+        newSession().setup(password.toCharArray())
+        lateinit var session: VaultSession
+        // Simulates a screen-off while the KDF/DB open is still running.
+        session = newSession(beforeOpen = { session.lock() })
+
+        session.unlock(password.toCharArray())
+
+        assertEquals(VaultState.Locked, session.state.value)
+        assertFalse("DB must be closed", openedDatabases.last().isOpen)
+        assertTrue("SQLCipher key must be zeroed", databaseKeys.last().all { it == 0.toByte() })
     }
 
     @Test
@@ -203,11 +220,12 @@ class VaultSessionTest {
             init(Cipher.DECRYPT_MODE, key, GCMParameterSpec(128, iv))
         }
 
-    private fun newSession() = VaultSession(
+    private fun newSession(beforeOpen: () -> Unit = {}) = VaultSession(
         headerStore = headerStore,
         crypto = VaultCrypto(Pbkdf2KeyDerivation()),
         kdfParams = TEST_KDF_PARAMS,
         openDatabase = { databaseKey ->
+            beforeOpen()
             databaseKeys += databaseKey
             Room.inMemoryDatabaseBuilder(context, CredentialDatabase::class.java)
                 .allowMainThreadQueries()

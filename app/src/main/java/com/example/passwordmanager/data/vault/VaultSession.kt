@@ -3,6 +3,7 @@ package com.example.passwordmanager.data.vault
 import com.example.passwordmanager.data.CredentialDatabase
 import com.example.passwordmanager.data.crypto.KdfParams
 import com.example.passwordmanager.data.crypto.VaultCrypto
+import java.util.concurrent.atomic.AtomicInteger
 import javax.crypto.Cipher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
@@ -35,14 +36,19 @@ class VaultSession(
     private var vaultKey: ByteArray? = null
     private var databaseKey: ByteArray? = null
 
+    // Counts lock() calls, so an unlock that was in flight during one (e.g. screen off while
+    // Argon2 runs) can lock again as soon as it finishes.
+    private val lockRequests = AtomicInteger()
+
     /** The caller still owns [password] and should zero it afterwards. */
     suspend fun setup(password: CharArray) {
         check(_state.value == VaultState.NotSetUp) { "Vault is already set up" }
         // NonCancellable: once the key exists, it must be kept or zeroed and an opened DB must
         // reach the state (or be closed); a cancellation in between would leak either.
+        val lockRequestsAtStart = lockRequests.get()
         withContext(NonCancellable + Dispatchers.Default) {
             val created = crypto.createVault(password, kdfParams)
-            openVault(created.vaultKey) { databaseKey ->
+            openVault(created.vaultKey, lockRequestsAtStart) { databaseKey ->
                 deleteDatabases()
                 openDatabase(databaseKey).also { database ->
                     try {
@@ -59,25 +65,29 @@ class VaultSession(
     /** Throws [VaultException.WrongPassword] and stays locked when the password is wrong. */
     suspend fun unlock(password: CharArray) {
         check(_state.value == VaultState.Locked) { "Vault is not locked" }
+        val lockRequestsAtStart = lockRequests.get()
         val header = loadHeader()
         withContext(NonCancellable + Dispatchers.Default) {
-            openVault(crypto.unlock(password, header))
+            openVault(crypto.unlock(password, header), lockRequestsAtStart)
         }
     }
 
     /** [cipher] is the DECRYPT cipher authenticated by the biometric prompt. */
     suspend fun unlockWithBiometric(cipher: Cipher) {
         check(_state.value == VaultState.Locked) { "Vault is not locked" }
+        val lockRequestsAtStart = lockRequests.get()
         val biometric = checkNotNull(loadHeader().biometric) { "Biometric unlock is not enabled" }
         withContext(NonCancellable + Dispatchers.Default) {
-            openVault(cipher.doFinal(biometric.wrappedKey))
+            openVault(cipher.doFinal(biometric.wrappedKey), lockRequestsAtStart)
         }
     }
 
-    /** Closes the DB and wipes the keys. Does nothing unless unlocked. */
+    /** Closes the DB and wipes the keys. If an unlock is in flight, it locks again when done. */
     fun lock() {
+        lockRequests.incrementAndGet()
         val unlocked = _state.value as? VaultState.Unlocked ?: return
-        _state.value = VaultState.Locked
+        // compareAndSet: lock() can run on the main thread and from openVault at the same time.
+        if (!_state.compareAndSet(unlocked, VaultState.Locked)) return
         unlocked.database.close()
         databaseKey?.fill(0)
         vaultKey?.fill(0)
@@ -108,6 +118,7 @@ class VaultSession(
     /** Takes ownership of [vaultKey]: kept until [lock] on success, zeroed on failure. */
     private suspend fun openVault(
         vaultKey: ByteArray,
+        lockRequestsAtStart: Int,
         open: (databaseKey: ByteArray) -> CredentialDatabase = openDatabase
     ) {
         val databaseKey = CredentialDatabase.sqlCipherRawKey(vaultKey)
@@ -121,5 +132,6 @@ class VaultSession(
             databaseKey.fill(0)
             throw e
         }
+        if (lockRequests.get() != lockRequestsAtStart) lock()
     }
 }
