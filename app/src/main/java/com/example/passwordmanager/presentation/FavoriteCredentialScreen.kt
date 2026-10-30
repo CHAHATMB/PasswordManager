@@ -1,29 +1,19 @@
 package com.example.passwordmanager.presentation
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Sort
+import androidx.compose.material.icons.automirrored.rounded.Sort
+import androidx.compose.material.icons.rounded.FavoriteBorder
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import com.example.passwordmanager.presentation.HomeScreen.CredentialItem
+import com.example.passwordmanager.presentation.HomeScreen.CredentialList
+import com.example.passwordmanager.presentation.components.AppTopBar
+import com.example.passwordmanager.presentation.components.EmptyState
 
 
 @Composable
@@ -34,36 +24,25 @@ fun FavoriteCredentialScreen(
 ) {
     Scaffold (
         topBar = {
-            Row (modifier = Modifier
-                .fillMaxWidth()
-                .height(55.dp)
-                .background(MaterialTheme.colorScheme.onPrimary)
-                .padding(16.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ){
-                Text(text = "Password Manager",
-                    modifier = Modifier.weight(1f),
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.primary
-                )
-                IconButton(onClick = { onEvent(CredentialEvent.SortCredential) }) {
-                    Icon(imageVector = Icons.Rounded.Sort, contentDescription = "Sort by date or website", modifier = Modifier.size(35.dp), tint = MaterialTheme.colorScheme.secondary)
+            AppTopBar(
+                title = "Favorites",
+                actions = {
+                    IconButton(onClick = { onEvent(CredentialEvent.SortCredential) }) {
+                        Icon(imageVector = Icons.AutoMirrored.Rounded.Sort, contentDescription = "Sort by date or website")
+                    }
                 }
-            }
+            )
         }
     ){
-        LazyColumn(contentPadding = it,
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(8.dp),
-            verticalArrangement =  Arrangement.spacedBy(16.dp)
-        ){
-            items(state.credentials, key = { credential -> credential.id }) { credential ->
-                CredentialItem(
-                    credential = credential,
-                    onEvent = onEvent,
-                    onClick = { navController.navigate(CredentialRoutes.detail(credential.id)) }
+        Box(modifier = Modifier.padding(it)) {
+            if (state.credentials.isEmpty()) {
+                EmptyState(
+                    icon = Icons.Rounded.FavoriteBorder,
+                    title = "No favourites yet",
+                    message = "Tap the heart on a password to pin it here."
                 )
+            } else {
+                CredentialList(credentials = state.credentials, navController = navController, onEvent = onEvent)
             }
         }
     }
