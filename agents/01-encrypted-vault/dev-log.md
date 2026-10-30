@@ -1,7 +1,7 @@
 # Dev Log – Encrypted vault
 
 ## Round 1
-- Base commit: <sha before work started>
+- Base commit: 5b23373a034607d6306dcd68523fd269b95629fe
 - Commits:
   - <sha> <subject>
 - Summary of changes:

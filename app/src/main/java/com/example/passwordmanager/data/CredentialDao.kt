@@ -21,6 +21,6 @@ interface CredentialDao {
     @Query("Select * From credential ORDER BY dataCreate ASC")
     fun getOrderedByDateCreated(): Flow<List<Credential>>
 
-    @Query("Select * From credential Where isFav = true")
+    @Query("Select * From credential WHERE isFav = 1")
     fun getFavoriteCredential(): Flow<List<Credential>>
 }
