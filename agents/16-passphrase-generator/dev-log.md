@@ -1,0 +1,40 @@
+# Dev Log – Passphrase generator
+
+## Round 1
+- Base commit: 4a93f64 (`main`). Branch `scratch/STRY-16-passphrase-generator`.
+- Commits (review range `4a93f64..HEAD`):
+  - cebdefa chore: bundle the EFF large wordlist
+  - f8104b5 feat: parse and validate the EFF wordlist
+  - 1acd3e0 refactor: map strength bands from bits with PasswordStrength.fromBits
+  - b7485c8 feat: add a SecureRandom passphrase generator with entropy in bits
+  - 3cac4cb test: cover passphrase generation, entropy, strength bands and wordlist parsing
+  - 1ad202e feat: let the strength indicator show bits
+  - bd12dbc feat: add a passphrase mode to the generator sheet
+  - ae7bee0 docs: credit the EFF wordlist in the README
+  - plus this `docs:` commit
+- Summary of changes:
+  - `res/raw/eff_large_wordlist.txt`: downloaded from the EFF URL in the brief, unmodified (7,776 lines, 108,800 bytes, SHA-256 `addd3553…996b903e`).
+  - `util/Wordlist.kt`: `parseWordlist(InputStream)` takes the second tab field of each non-blank line; `WordlistException` (extends `IOException`) on a blank word, a duplicate or a count other than `EFF_WORDLIST_SIZE` (7776). It does not close the stream; the caller uses `use {}`.
+  - `util/PassphraseGenerator.kt`: `PassphraseGenerator(SecureRandom, words)`, `PassphraseOptions`, `Separator` enum, `MIN/MAX/DEFAULT_PASSPHRASE_WORDS` (4/10/6), `PassphraseOptions.entropyBits(listSize)`. Draw order: words, then the digit's word position, then the digit, all via `nextInt(bound)`.
+  - `util/PasswordStrength.kt`: `fromBits(bits)` holds the 40/60/80 bands; `of()` calls it.
+  - `AppContainer.loadPassphraseWords()`: `applicationScope.async(Dispatchers.IO, start = LAZY)` reading `R.raw.eff_large_wordlist`; parsed once per process.
+  - `GeneratorSheet`: "Passphrase" switch under the title. Passphrase mode shows the preview, "Strength: <level> · <n> bits", a Words slider (4–10), a separator segmented row (`-`, Space, `.`, `_`), "Capitalise words", "Add a digit" and "Wordlist: EFF (CC BY 3.0)". Password options and preview are kept untouched while in passphrase mode. While loading it shows "Loading wordlist…", Regenerate/Use are disabled.
+  - `PasswordStrengthIndicator(strength, bits = null)`: optional bits suffix, used only in passphrase mode.
+  - README Acknowledgments: EFF credit line with the CC BY 3.0 US link.
+- Decisions / deviations from brief:
+  - Error type: extended the existing sealed `GeneratorOptionsException` with `WordCountOutOfRange` (one error type for all generator options) instead of a sibling class.
+  - Loader is passed as a `loadPassphraseWords: suspend () -> List<String>` parameter (MainActivity → `AddCredentialScreen` → `GeneratorSheet`), since composables here get dependencies by parameter; there is no `LocalAppContainer`.
+  - The bits label is floored (`toInt()`): 51 / 77 / 90 for 4 / 6 / 7 words.
+  - **Brief mismatch:** the real EFF list contains 4 hyphenated words: `drop-down`, `felt-tip`, `t-shirt`, `yo-yo`. The list is kept unmodified per the brief (filtering would change the list size and the entropy constant). `WordlistTest` asserts no whitespace/`.`/`_` and pins exactly those four hyphenated words. Entropy is unaffected (words are still drawn uniformly).
+  - A failed load is cached by the `Deferred`, so turning Passphrase off/on doesn't retry within the process. Not expected for a bundled file.
+- Unit tests added (254 total, 0 failures):
+  - `PassphraseGeneratorTest` (14): word count at 4/6/10; 3 and 11 → `WordCountOutOfRange`; chi-square uniformity over 160,000 draws from 16 words (limit 37.70, df 15, p = 0.001; counts printed on failure); fixed-sequence `SecureRandom` fake maps draw i → `words[i]`; separator count = wordCount − 1 for all separators; capitalise on/off; add-digit gives exactly one digit at a word end, all digits 0–9 and all 6 positions seen; no digits when off; consecutive phrases differ; entropy 6 → 77.55, 4 → 51.70, digit adds log2(10)+log2(6), capitalise/separator add 0; 4/6/7 words → Fair/Good/Strong.
+  - `WordlistTest` (5): the bundled file parses to 7,776 unique lowercase words (with the hyphen caveat above); blank lines skipped; wrong count, duplicate and blank word (`\t`, whitespace, no tab) → `WordlistException`.
+  - `PasswordStrengthTest` (+1): `fromBits` at 0 / 39.99 / 40 / 59.99 / 60 / 79.99 / 80. Existing `of()` tests unchanged and passing.
+  - The synthetic generator list is `aaa..ppp` instead of the brief's `w0..w15`, because digit-free words are needed for the add-a-digit checks.
+- Build/test result: `./gradlew assembleDebug testDebugUnitTest` → PASS (254 tests, 0 failures).
+- Notes for reviewer/verifier:
+  - Not run on a device.
+  - With the Hyphen separator, about 0.3 % of 6-word phrases contain one of the 4 hyphenated words, so the preview can show more than wordCount − 1 hyphens. Use another separator when checking the separator AC, or regenerate.
+  - Known gap (from brief): after "Use", the Add/Edit field indicator still uses the char-class estimate and over-rates passphrases.
+  - Nothing is logged; the sheet stays `SecureOn`.
