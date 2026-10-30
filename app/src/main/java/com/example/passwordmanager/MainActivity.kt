@@ -80,7 +80,7 @@ import com.example.passwordmanager.presentation.SettingsScreen.IMPORT_MIME_TYPES
 import com.example.passwordmanager.presentation.SettingsScreen.SettingsScreen
 import com.example.passwordmanager.presentation.SettingsScreen.SettingsViewModel
 import com.example.passwordmanager.presentation.components.rememberIsKeyboardOpen
-import com.example.passwordmanager.ui.theme.PasswordManagerTheme
+import com.example.passwordmanager.ui.theme.AppTheme
 import com.example.passwordmanager.ui.theme.shapes.BottomNavCustomShape
 import com.example.passwordmanager.util.BiometricPromptUtils
 import javax.crypto.Cipher
@@ -94,6 +94,7 @@ class MainActivity : FragmentActivity() {
     private val settingsViewModel by viewModels<SettingsViewModel> { SettingsViewModel.Factory }
 
     private val autoLockObserver get() = (application as PasswordManagerApp).container.autoLockObserver
+    private val settingsStore get() = (application as PasswordManagerApp).container.settingsStore
 
     // Registered on the activity, not in the vault's composition, so a result still arrives after a
     // lock during the trip (an export then deletes the empty file the picker created).
@@ -118,7 +119,8 @@ class MainActivity : FragmentActivity() {
         // Created in onCreate so the prompt reconnects to this callback after a configuration change.
         biometricPrompt = BiometricPromptUtils.createBiometricPrompt(this, ::onBiometricAuthenticated)
         setContent {
-            PasswordManagerTheme {
+            val themeMode by settingsStore.themeMode.collectAsState()
+            AppTheme(themeMode = themeMode) {
                 val vaultState by lockViewModel.vaultState.collectAsState()
                 val lockState by lockViewModel.state.collectAsState()
                 // Each branch owns its own composition, so a state change drops the whole
