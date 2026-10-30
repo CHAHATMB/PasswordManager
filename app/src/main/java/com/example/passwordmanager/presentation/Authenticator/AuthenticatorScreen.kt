@@ -12,6 +12,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.ImportExport
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.QrCode
 import androidx.compose.material.icons.rounded.Shield
@@ -67,12 +68,20 @@ fun AuthenticatorScreen(
             AppTopBar(
                 title = "Authenticator",
                 actions = {
-                    if (state.items.isNotEmpty()) {
-                        Box {
-                            IconButton(onClick = { isMenuOpen = true }) {
-                                Icon(imageVector = Icons.Rounded.MoreVert, contentDescription = "More options")
-                            }
-                            DropdownMenu(expanded = isMenuOpen, onDismissRequest = { isMenuOpen = false }) {
+                    Box {
+                        IconButton(onClick = { isMenuOpen = true }) {
+                            Icon(imageVector = Icons.Rounded.MoreVert, contentDescription = "More options")
+                        }
+                        DropdownMenu(expanded = isMenuOpen, onDismissRequest = { isMenuOpen = false }) {
+                            DropdownMenuItem(
+                                text = { Text(text = "Import from Google Authenticator") },
+                                leadingIcon = { Icon(imageVector = Icons.Rounded.ImportExport, contentDescription = null) },
+                                onClick = {
+                                    isMenuOpen = false
+                                    onEvent(AuthenticatorEvent.OpenGoogleImport)
+                                }
+                            )
+                            if (state.items.isNotEmpty()) {
                                 DropdownMenuItem(
                                     text = { Text(text = "Export accounts") },
                                     leadingIcon = { Icon(imageVector = Icons.Rounded.QrCode, contentDescription = null) },
@@ -95,7 +104,7 @@ fun AuthenticatorScreen(
                 EmptyState(
                     icon = Icons.Rounded.Shield,
                     title = "No authenticator accounts",
-                    message = "Tap + to add one by scanning its QR code or entering its setup key."
+                    message = "Tap + to scan a QR code, or pick an image or enter the setup key from the scanner."
                 )
             } else {
                 LazyColumn(
