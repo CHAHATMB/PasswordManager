@@ -159,7 +159,11 @@ class MainActivity : FragmentActivity() {
                 // Each branch owns its own composition, so a state change drops the whole
                 // navigation back stack and sheet state of the previous branch.
                 when (vaultState) {
-                    VaultState.NotSetUp -> SetupScreen(state = lockState, onSetup = lockViewModel::setup)
+                    VaultState.NotSetUp -> {
+                        val context = LocalContext.current
+                        val isBiometricAvailable = remember { BiometricPromptUtils.canAuthenticate(context) }
+                        SetupScreen(state = lockState, isBiometricAvailable = isBiometricAvailable, onSetup = lockViewModel::setup)
+                    }
                     VaultState.Locked -> {
                         LaunchedEffect(Unit) {
                             // Waits for RESUMED: after a screen-off lock the prompt appears once the user is back.
@@ -167,7 +171,12 @@ class MainActivity : FragmentActivity() {
                         }
                         UnlockScreen(state = lockState, onUnlock = lockViewModel::unlock)
                     }
-                    is VaultState.Unlocked -> VaultShell()
+                    is VaultState.Unlocked -> {
+                        LaunchedEffect(Unit) {
+                            lifecycle.withResumed { if (lockViewModel.takeBiometricEnrolmentRequest()) showEnablePrompt() }
+                        }
+                        VaultShell()
+                    }
                 }
             }
         }

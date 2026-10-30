@@ -48,20 +48,43 @@ class LockViewModel(
 
     private var countdown: Job? = null
     private var isBiometricPromptDue = false
+    private var isBiometricEnrolmentDue = false
 
     init {
         startCountdown()
         viewModelScope.launch {
-            session.state.collect { if (it == VaultState.Locked) isBiometricPromptDue = true }
+            session.state.collect {
+                if (it == VaultState.Locked) {
+                    isBiometricPromptDue = true
+                    isBiometricEnrolmentDue = false
+                }
+            }
         }
     }
 
-    fun setup(password: String, confirmation: String) {
+    fun setup(password: String, confirmation: String, enableBiometric: Boolean) {
         when (validateMasterPassword(password, confirmation)) {
             MasterPasswordError.TooShort -> _state.value = LockState(error = LockError.PasswordTooShort)
             MasterPasswordError.Mismatch -> _state.value = LockState(error = LockError.PasswordMismatch)
-            null -> submitPassword(password, session::setup)
+            null -> submitPassword(password) { passwordChars ->
+                // Set before the call and cleared on failure: setup publishes Unlocked from a background
+                // thread, so the Unlocked screen can ask for the request before this coroutine resumes.
+                isBiometricEnrolmentDue = enableBiometric
+                try {
+                    session.setup(passwordChars)
+                } catch (e: Throwable) {
+                    isBiometricEnrolmentDue = false
+                    throw e
+                }
+            }
         }
+    }
+
+    /** True once after a successful setup with the fingerprint switch on, so the enable prompt runs once. */
+    fun takeBiometricEnrolmentRequest(): Boolean {
+        val isDue = isBiometricEnrolmentDue
+        isBiometricEnrolmentDue = false
+        return isDue
     }
 
     fun unlock(password: String) {

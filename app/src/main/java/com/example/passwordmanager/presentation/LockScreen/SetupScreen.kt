@@ -1,14 +1,19 @@
 package com.example.passwordmanager.presentation.LockScreen
 
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import com.example.passwordmanager.presentation.MIN_MASTER_PASSWORD_LENGTH
@@ -19,10 +24,12 @@ import com.example.passwordmanager.util.PasswordStrength
 @Composable
 fun SetupScreen(
     state: LockState,
-    onSetup: (password: String, confirmation: String) -> Unit
+    isBiometricAvailable: Boolean,
+    onSetup: (password: String, confirmation: String, enableBiometric: Boolean) -> Unit
 ) {
     var password by remember { mutableStateOf("") }
     var confirmation by remember { mutableStateOf("") }
+    var enableBiometric by rememberSaveable { mutableStateOf(false) }
 
     LockScreenLayout(
         headline = "Welcome to Vaultly",
@@ -60,11 +67,24 @@ fun SetupScreen(
             modifier = Modifier.fillMaxWidth(),
             enabled = !state.isWorking
         )
+        if (isBiometricAvailable) {
+            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(text = "Unlock with fingerprint", style = MaterialTheme.typography.bodyLarge)
+                    Text(
+                        text = "You can change this later in Settings.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Switch(checked = enableBiometric, onCheckedChange = { enableBiometric = it }, enabled = !state.isWorking)
+            }
+        }
         Button(
             modifier = Modifier.fillMaxWidth(),
             enabled = !state.isWorking,
             // Not cleared here: a failed setup keeps the fields, and success leaves this screen.
-            onClick = { onSetup(password, confirmation) }
+            onClick = { onSetup(password, confirmation, isBiometricAvailable && enableBiometric) }
         ) {
             Text(text = "Create vault")
         }
