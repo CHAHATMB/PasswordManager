@@ -72,8 +72,10 @@ class AuthenticatorViewModel(
 
     fun onEvent(event: AuthenticatorEvent) {
         when (event) {
-            AuthenticatorEvent.OpenAddOptions -> dialog = AuthenticatorDialog.AddOptions
-            AuthenticatorEvent.OpenManualEntry -> dialog = AuthenticatorDialog.ManualEntry(TotpDraft())
+            AuthenticatorEvent.OpenManualEntry -> {
+                if (vaultState.value !is VaultState.Unlocked) return
+                dialog = AuthenticatorDialog.ManualEntry(TotpDraft())
+            }
             is AuthenticatorEvent.ChangeDraft -> {
                 // Ignored once closed, so a late change can't reopen the form.
                 if (dialog is AuthenticatorDialog.ManualEntry) dialog = AuthenticatorDialog.ManualEntry(event.draft)

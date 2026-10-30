@@ -1,6 +1,5 @@
 package com.example.passwordmanager.presentation.Authenticator
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -13,17 +12,11 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ExpandLess
 import androidx.compose.material.icons.rounded.ExpandMore
-import androidx.compose.material.icons.rounded.Image
-import androidx.compose.material.icons.rounded.ImportExport
-import androidx.compose.material.icons.rounded.Keyboard
-import androidx.compose.material.icons.rounded.QrCodeScanner
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.ListItem
-import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.ModalBottomSheetDefaults
@@ -36,8 +29,6 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.SecureFlagPolicy
@@ -64,19 +55,6 @@ fun AuthenticatorDialogs(
     val dismiss = { onEvent(AuthenticatorEvent.Dismiss) }
     when (dialog) {
         null -> Unit
-        AuthenticatorDialog.AddOptions -> AddOptionsSheet(
-            onScanQrCode = {
-                dismiss()
-                onScanQrCode()
-            },
-            onScanImage = {
-                dismiss()
-                onScanImage()
-            },
-            onEnterKey = { onEvent(AuthenticatorEvent.OpenManualEntry) },
-            onImportFromGoogle = { onEvent(AuthenticatorEvent.OpenGoogleImport) },
-            onDismiss = dismiss
-        )
         AuthenticatorDialog.GoogleImportHelp -> AlertDialog(
             onDismissRequest = dismiss,
             properties = secureDialog,
@@ -214,33 +192,6 @@ fun AuthenticatorDialogs(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun AddOptionsSheet(
-    onScanQrCode: () -> Unit,
-    onScanImage: () -> Unit,
-    onEnterKey: () -> Unit,
-    onImportFromGoogle: () -> Unit,
-    onDismiss: () -> Unit
-) {
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        properties = ModalBottomSheetDefaults.properties(securePolicy = SecureFlagPolicy.SecureOn)
-    ) {
-        Column(modifier = Modifier.padding(bottom = Spacing.xl)) {
-            Text(
-                text = "Add account",
-                style = MaterialTheme.typography.titleLarge,
-                modifier = Modifier.padding(horizontal = Spacing.l, vertical = Spacing.s)
-            )
-            AddOption(Icons.Rounded.QrCodeScanner, "Scan QR code", onScanQrCode)
-            AddOption(Icons.Rounded.Image, "Scan from image", onScanImage)
-            AddOption(Icons.Rounded.Keyboard, "Enter setup key", onEnterKey)
-            AddOption(Icons.Rounded.ImportExport, "Import from Google Authenticator", onImportFromGoogle)
-        }
-    }
-}
-
 @Composable
 private fun MigrationPreviewDialog(batch: MigrationResult.Batch, onImport: () -> Unit, onDismiss: () -> Unit) {
     AlertDialog(
@@ -278,16 +229,6 @@ private fun MigrationImportSummary.message(): String {
     val parts = mutableListOf("Imported $imported", "$duplicates already in Vaultly")
     if (unsupported > 0) parts += "$unsupported not supported (counter-based or invalid)"
     return parts.joinToString(", ") + "."
-}
-
-@Composable
-private fun AddOption(icon: ImageVector, label: String, onClick: () -> Unit) {
-    ListItem(
-        headlineContent = { Text(text = label) },
-        leadingContent = { Icon(imageVector = icon, contentDescription = null) },
-        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-        modifier = Modifier.clickable(onClick = onClick)
-    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

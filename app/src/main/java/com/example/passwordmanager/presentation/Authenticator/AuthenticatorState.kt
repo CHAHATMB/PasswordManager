@@ -70,7 +70,6 @@ data class MigrationImportSummary(
 
 /** The add/edit/delete step on screen. Held in the ViewModel so it survives a configuration change. */
 sealed interface AuthenticatorDialog {
-    data object AddOptions : AuthenticatorDialog
     data class ManualEntry(val draft: TotpDraft) : AuthenticatorDialog
     /** Reading a picked image. */
     data object Scanning : AuthenticatorDialog
@@ -85,7 +84,6 @@ sealed interface AuthenticatorDialog {
 }
 
 sealed interface AuthenticatorEvent {
-    data object OpenAddOptions : AuthenticatorEvent
     data object OpenManualEntry : AuthenticatorEvent
     data class ChangeDraft(val draft: TotpDraft) : AuthenticatorEvent
     data object SaveDraft : AuthenticatorEvent

@@ -118,8 +118,17 @@ class MainActivity : FragmentActivity() {
         onBackupPicked(BackupEvent.ImportCsv(it))
     }
     private val scanQrCodeLauncher = registerForActivityResult(ScanContract()) { result ->
-        val isCameraPermissionMissing = result.originalIntent?.hasExtra(Intents.Scan.MISSING_CAMERA_PERMISSION) == true
-        authenticatorViewModel.onEvent(AuthenticatorEvent.QrScanned(result.contents, isCameraPermissionMissing))
+        val alternative = result.originalIntent?.getStringExtra(EXTRA_SCANNER_ALTERNATIVE)
+            ?.let { name -> ScannerAlternative.entries.find { it.name == name } }
+        when (alternative) {
+            // The vault may have locked while the scanner was open; don't open the picker over the lock screen.
+            ScannerAlternative.Gallery -> if (lockViewModel.vaultState.value is VaultState.Unlocked) openImagePicker()
+            ScannerAlternative.ManualEntry -> authenticatorViewModel.onEvent(AuthenticatorEvent.OpenManualEntry)
+            null -> {
+                val isCameraPermissionMissing = result.originalIntent?.hasExtra(Intents.Scan.MISSING_CAMERA_PERMISSION) == true
+                authenticatorViewModel.onEvent(AuthenticatorEvent.QrScanned(result.contents, isCameraPermissionMissing))
+            }
+        }
     }
     private val scanImageLauncher = registerForActivityResult(ActivityResultContracts.OpenDocument()) {
         autoLockObserver.endAppTrip()
@@ -295,7 +304,7 @@ class MainActivity : FragmentActivity() {
             floatingActionButton = {
                 if (isFabVisible) FloatingActionButton(onClick = {
                     when (currentRoute) {
-                        NavigationItem.Authenticator.route -> authenticatorViewModel.onEvent(AuthenticatorEvent.OpenAddOptions)
+                        NavigationItem.Authenticator.route -> openQrScanner()
                         NavigationItem.Notes.route -> navController.navigate(NoteRoutes.editor(NoteRoutes.NEW_NOTE_ID)) { launchSingleTop = true }
                         else -> viewModel.onEvent(CredentialEvent.OpenAddSheet)
                     }
