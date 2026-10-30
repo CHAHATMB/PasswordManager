@@ -4,6 +4,8 @@ import android.database.SQLException
 import com.example.passwordmanager.data.vault.VaultException
 import com.example.passwordmanager.data.vault.VaultSession
 import com.example.passwordmanager.data.vault.VaultState
+import androidx.annotation.VisibleForTesting
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flatMapLatest
@@ -27,10 +29,14 @@ class CredentialRepository(private val session: VaultSession) {
             if (state is VaultState.Unlocked) query(state.database.dao) else flowOf(emptyList())
         }
 
-    private suspend fun write(action: suspend (CredentialDao) -> Unit) {
+    @VisibleForTesting
+    internal suspend fun write(action: suspend (CredentialDao) -> Unit) {
         val state = session.state.value as? VaultState.Unlocked ?: throw VaultException.Locked()
         try {
             action(state.database.dao)
+        } catch (e: CancellationException) {
+            // A subclass of IllegalStateException; it must propagate, not become Locked.
+            throw e
         } catch (e: IllegalStateException) {
             throw lockedOr(e)
         } catch (e: SQLException) {

@@ -10,6 +10,7 @@ import com.example.passwordmanager.data.vault.VaultException
 import com.example.passwordmanager.data.vault.VaultHeaderStore
 import com.example.passwordmanager.data.vault.VaultSession
 import com.example.passwordmanager.data.vault.VaultState
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After
@@ -71,6 +72,34 @@ class CredentialRepositoryTest {
     }
 
     @Test
+    fun closedDatabaseErrorAfterLockMidWriteBecomesLocked() = runTest {
+        val session = newSession()
+        session.setup(password.toCharArray())
+
+        val thrown = writeFailure(CredentialRepository(session)) {
+            session.lock()
+            throw IllegalStateException("attempt to re-open an already-closed object")
+        }
+
+        println("Mid-write lock surfaced as $thrown")
+        assertTrue(thrown is VaultException.Locked)
+    }
+
+    @Test
+    fun cancellationDuringWriteAfterLockIsRethrownNotMappedToLocked() = runTest {
+        val session = newSession()
+        session.setup(password.toCharArray())
+
+        val thrown = writeFailure(CredentialRepository(session)) {
+            session.lock()
+            throw CancellationException("cancelled")
+        }
+
+        println("Cancellation during a locked write surfaced as $thrown")
+        assertTrue(thrown is CancellationException)
+    }
+
+    @Test
     fun storedCredentialIsRetrievedAfterRelaunchAndUnlock() = runTest {
         val setupSession = newSession()
         setupSession.setup(password.toCharArray())
@@ -98,6 +127,14 @@ class CredentialRepositoryTest {
 
         assertTrue(repository.getOrderedByWebsite().first().isEmpty())
     }
+
+    private suspend fun writeFailure(repository: CredentialRepository, action: suspend () -> Unit): Exception? =
+        try {
+            repository.write { action() }
+            null
+        } catch (e: Exception) {
+            e
+        }
 
     // File-backed so data written by one session is visible to the next, like a relaunch.
     private fun newSession() = VaultSession(
