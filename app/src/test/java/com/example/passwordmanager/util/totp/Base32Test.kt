@@ -43,6 +43,16 @@ class Base32Test {
     }
 
     @Test
+    fun decodeTreatsTabsAndLineBreaksLikeSpaces() {
+        val expected = "foobar".encodeToByteArray()
+        listOf("MZXW\t6YTB\tOI", "MZXW\n6YTB\r\nOI\n", "\tmzxw 6ytb\u00A0oi").forEach { text ->
+            val decoded = Base32.decode(text)
+            println("decode(${text.map { it.code }}) -> ${decoded?.decodeToString()}")
+            assertArrayEquals(text, expected, decoded)
+        }
+    }
+
+    @Test
     fun decodesTheCommonExampleKey() {
         val expected = "Hello!".encodeToByteArray() + byteArrayOf(0xDE.toByte(), 0xAD.toByte(), 0xBE.toByte(), 0xEF.toByte())
         assertArrayEquals(expected, Base32.decode("JBSWY3DPEHPK3PXP"))
@@ -50,7 +60,7 @@ class Base32Test {
 
     @Test
     fun decodeRejectsCharactersOutsideTheAlphabet() {
-        listOf("ABC1", "ABC0", "ABC8", "ABC9", "ABC!", "MZ=XW", "MZXW_6", "MZXW\n6").forEach { text ->
+        listOf("ABC1", "ABC0", "ABC8", "ABC9", "ABC!", "MZ=XW", "MZXW_6", "MZXW.6").forEach { text ->
             assertNull("decode(\"$text\")", Base32.decode(text))
         }
     }

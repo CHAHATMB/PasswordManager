@@ -25,11 +25,11 @@ object Base32 {
     }
 
     /**
-     * Decodes ignoring case, spaces and hyphens, with or without padding. Returns null for any other
+     * Decodes ignoring case, whitespace (spaces, tabs, line breaks) and hyphens, with or without padding. Returns null for any other
      * character. Bits left over after the last full byte are dropped, as authenticator apps do.
      */
     fun decode(text: String): ByteArray? {
-        val normalized = text.filterNot { it == ' ' || it == '-' }.uppercase().trimEnd(PADDING)
+        val normalized = text.filterNot { it.isWhitespace() || it == '-' }.uppercase().trimEnd(PADDING)
         val output = ByteArray(normalized.length * 5 / 8)
         var buffer = 0
         var bits = 0
