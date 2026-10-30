@@ -11,6 +11,9 @@ import com.example.passwordmanager.data.crypto.KdfParams
 import com.example.passwordmanager.data.crypto.Pbkdf2KeyDerivation
 import com.example.passwordmanager.data.crypto.TEST_KDF_PARAMS
 import com.example.passwordmanager.data.crypto.VaultCrypto
+import com.example.passwordmanager.data.totp.TotpRepository
+import com.example.passwordmanager.data.totp.totpAccount
+import com.example.passwordmanager.util.totp.TotpAlgorithm
 import com.example.passwordmanager.data.vault.VaultHeaderStore
 import com.example.passwordmanager.data.vault.VaultSession
 import java.io.ByteArrayInputStream
@@ -34,6 +37,10 @@ class BackupRepositoryTest {
     private val saved = listOf(
         Credential(website = "github.com", username = "alice", password = "gh-secret-1", dataCreate = 1, isFav = true, note = "2FA codes\nin the drawer"),
         Credential(website = "example.com", username = "bob", password = "ex,pass-2", dataCreate = 2, note = "")
+    )
+    private val savedTotp = listOf(
+        totpAccount("Example", "alice@example.com", "JBSWY3DPEHPK3PXP", createdAt = 3),
+        totpAccount("ACME Co", "bob", "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ", TotpAlgorithm.SHA256, digits = 8, period = 60, createdAt = 4)
     )
 
     @After
@@ -74,6 +81,27 @@ class BackupRepositoryTest {
     }
 
     @Test
+    fun backupRestoresAuthenticatorAccountsWithTheSameCodesAndReimportIsAllDuplicates() = runTest {
+        val source = unlockedVault(VAULT_NAMES[0])
+        source.credentials.insertSkippingDuplicates(saved)
+        source.totp.insertSkippingDuplicates(savedTotp)
+        val backupUri = register("backup.json", source.backup.createBackup(backupPassword.toCharArray()))
+
+        val target = unlockedVault(VAULT_NAMES[1])
+        val restored = target.backup.importBackup(target.backup.readBackup(backupUri), backupPassword.toCharArray())
+        val again = target.backup.importBackup(target.backup.readBackup(backupUri), backupPassword.toCharArray())
+
+        println("TOTP restore ${restored.totpCounts()}, again ${again.totpCounts()}")
+        assertEquals(Triple(2, 0, 0), restored.totpCounts())
+        assertEquals(Triple(0, 2, 0), again.totpCounts())
+        assertEquals(Triple(2, 0, 0), restored.counts())
+        val restoredTotp = target.totp.getAll()
+        assertEquals(savedTotp, restoredTotp.map { it.copy(id = 0) })
+        val time = 1_111_111_111L
+        assertEquals(savedTotp.map { it.codeAt(time) }, restoredTotp.map { it.codeAt(time) })
+    }
+
+    @Test
     fun wrongBackupPasswordImportsNothing() = runTest {
         val (source, sourceCredentials) = unlockedVault(VAULT_NAMES[0])
         sourceCredentials.insertSkippingDuplicates(saved)
@@ -100,6 +128,10 @@ class BackupRepositoryTest {
 
     private fun ImportResult.counts() = Triple(imported, duplicates, invalid)
 
+    private fun ImportResult.totpCounts() = Triple(totpImported, totpDuplicates, totpInvalid)
+
+    private data class Vault(val backup: BackupRepository, val credentials: CredentialRepository, val totp: TotpRepository)
+
     private fun register(name: String, bytes: ByteArray): Uri {
         val uri = Uri.parse("content://test/$name")
         shadowOf(context.contentResolver).registerInputStreamSupplier(uri) { ByteArrayInputStream(bytes) }
@@ -110,7 +142,7 @@ class BackupRepositoryTest {
         checkNotNull(javaClass.getResourceAsStream("/csv/$name")) { "Missing fixture $name" }.use { it.readBytes() }
 
     /** A set-up vault with its own header prefs and DB file, so two of them can coexist like two phones. */
-    private suspend fun unlockedVault(name: String): Pair<BackupRepository, CredentialRepository> {
+    private suspend fun unlockedVault(name: String): Vault {
         val session = VaultSession(
             headerStore = VaultHeaderStore(context.getSharedPreferences(name, Context.MODE_PRIVATE)),
             crypto = VaultCrypto(Pbkdf2KeyDerivation()),
@@ -126,9 +158,11 @@ class BackupRepositoryTest {
         )
         session.setup("correct horse battery staple".toCharArray())
         val credentials = CredentialRepository(session)
+        val totp = TotpRepository(session)
         // Within the bounds BackupCrypto.parse enforces; the PBKDF2 stand-in reads iterations only.
         val backupParams = KdfParams(memoryKib = 16, iterations = 10, parallelism = 1)
-        return BackupRepository(context.contentResolver, credentials, BackupCrypto(Pbkdf2KeyDerivation()), backupParams) { now } to credentials
+        val backup = BackupRepository(context.contentResolver, credentials, totp, BackupCrypto(Pbkdf2KeyDerivation()), backupParams) { now }
+        return Vault(backup, credentials, totp)
     }
 
     private companion object {

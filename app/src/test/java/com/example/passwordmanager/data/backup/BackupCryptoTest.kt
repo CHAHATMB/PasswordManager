@@ -1,8 +1,13 @@
 package com.example.passwordmanager.data.backup
 
+import com.example.passwordmanager.data.crypto.IV_SIZE_BYTES
 import com.example.passwordmanager.data.crypto.Pbkdf2KeyDerivation
 import com.example.passwordmanager.data.crypto.KdfParams
+import com.example.passwordmanager.data.crypto.SALT_SIZE_BYTES
+import com.example.passwordmanager.data.crypto.aesGcmCipher
+import com.example.passwordmanager.data.crypto.derivePasswordKey
 import java.util.Base64
+import javax.crypto.Cipher
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -23,29 +28,68 @@ class BackupCryptoTest {
         BackupItem("github.com", "alice", "gh-secret-1", "line one\nline two, \"quoted\"", favorite = true, created = 1),
         BackupItem("example.com", "bob@example.com", "p@ss,word", "", favorite = false, created = 2)
     )
+    private val totp = listOf(
+        BackupTotp("Example", "alice@example.com", "JBSWY3DPEHPK3PXP", "SHA1", digits = 6, period = 30, created = 3),
+        BackupTotp("ACME Co", "bob", "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ", "SHA256", digits = 8, period = 60, created = 4)
+    )
+    private val content = BackupContent(items, totp)
 
     @Test
     fun exportThenImportRestoresEqualItems() {
-        val file = crypto.encrypt(items, password.toCharArray(), params)
+        val file = crypto.encrypt(content, password.toCharArray(), params)
 
         val restored = crypto.decrypt(crypto.parse(file), password.toCharArray())
 
-        assertEquals(items, restored)
+        println("Restored ${restored.credentials.size} credentials and ${restored.totp}")
+        assertEquals(content, restored)
+        assertEquals(2, crypto.parse(file).header.version)
+    }
+
+    @Test
+    fun version1FileWithAnArrayPayloadStillDecrypts() {
+        val restored = crypto.decrypt(crypto.parse(version1File(items)), password.toCharArray())
+
+        assertEquals(BackupContent(items, totp = emptyList()), restored)
+    }
+
+    @Test
+    fun backupTotpEntriesAreValidatedLikeScannedAccounts() {
+        val valid = totp[1].toTotpAccountOrNull()
+        assertEquals(listOf("ACME Co", "bob", "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ"), listOf(valid?.issuer, valid?.accountName, valid?.secret))
+        assertEquals(4L, valid?.createdAt)
+        listOf(
+            totp[0].copy(secret = "ABC1!"),
+            totp[0].copy(secret = ""),
+            totp[0].copy(algorithm = "MD5"),
+            totp[0].copy(digits = 7),
+            totp[0].copy(period = 0)
+        ).forEach { entry ->
+            assertEquals(entry.toString(), null, entry.toTotpAccountOrNull())
+        }
+    }
+
+    @Test
+    fun relabellingAVersion2FileAsVersion1FailsDecryption() {
+        val file = crypto.encrypt(content, password.toCharArray(), params).edit { it.copy(version = 1) }
+
+        assertThrows(BackupException.WrongPassword::class.java) {
+            crypto.decrypt(crypto.parse(file), password.toCharArray())
+        }
     }
 
     @Test
     fun fileIsPmExportJsonWithoutAnyPlaintextValues() {
-        val text = crypto.encrypt(items, password.toCharArray(), params).decodeToString()
+        val text = crypto.encrypt(content, password.toCharArray(), params).decodeToString()
 
         assertTrue(text, text.contains("\"format\":\"pm-export\""))
-        listOf("github.com", "alice", "gh-secret-1", "line one", "bob@example.com", "p@ss,word").forEach {
+        listOf("github.com", "alice", "gh-secret-1", "line one", "bob@example.com", "p@ss,word", "JBSWY3DPEHPK3PXP", "ACME").forEach {
             assertFalse("File leaks '$it'", text.contains(it))
         }
     }
 
     @Test
     fun wrongPasswordThrowsWrongPassword() {
-        val backup = crypto.parse(crypto.encrypt(items, password.toCharArray(), params))
+        val backup = crypto.parse(crypto.encrypt(content, password.toCharArray(), params))
 
         assertThrows(BackupException.WrongPassword::class.java) {
             crypto.decrypt(backup, "export password 2".toCharArray())
@@ -54,7 +98,7 @@ class BackupCryptoTest {
 
     @Test
     fun changingAnyKdfFieldIvOrCiphertextFailsDecryption() {
-        val file = crypto.encrypt(items, password.toCharArray(), params)
+        val file = crypto.encrypt(content, password.toCharArray(), params)
         // The PBKDF2 test KDF ignores memory and parallelism, so those two cases fail only through the AAD.
         val tampered = listOf<(BackupFile) -> BackupFile>(
             { it.copy(kdf = it.kdf.copy(memoryKiB = it.kdf.memoryKiB + 1)) },
@@ -75,8 +119,8 @@ class BackupCryptoTest {
 
     @Test
     fun twoExportsOfTheSameDataUseDifferentSaltIvAndCiphertext() {
-        val first = crypto.encrypt(items, password.toCharArray(), params).toBackupFile()
-        val second = crypto.encrypt(items, password.toCharArray(), params).toBackupFile()
+        val first = crypto.encrypt(content, password.toCharArray(), params).toBackupFile()
+        val second = crypto.encrypt(content, password.toCharArray(), params).toBackupFile()
 
         assertNotEquals(first.kdf.salt, second.kdf.salt)
         assertNotEquals(first.iv, second.iv)
@@ -100,17 +144,17 @@ class BackupCryptoTest {
 
     @Test
     fun otherVersionsAreUnsupported() {
-        val file = crypto.encrypt(items, password.toCharArray(), params)
+        val file = crypto.encrypt(content, password.toCharArray(), params)
 
         val thrown = assertThrows(BackupException.UnsupportedVersion::class.java) {
-            crypto.parse(file.edit { it.copy(version = 2) })
+            crypto.parse(file.edit { it.copy(version = 3) })
         }
-        assertEquals(2, thrown.version)
+        assertEquals(3, thrown.version)
     }
 
     @Test
     fun missingFieldsUnknownCipherOrOutOfRangeKdfParamsAreMalformed() {
-        val file = crypto.encrypt(items, password.toCharArray(), params)
+        val file = crypto.encrypt(content, password.toCharArray(), params)
         val invalid = listOf(
             "{\"format\":\"pm-export\",\"version\":1}".encodeToByteArray(),
             file.edit { it.copy(cipher = "AES-128-CBC") },
@@ -125,6 +169,20 @@ class BackupCryptoTest {
         invalid.forEachIndexed { index, bytes ->
             assertThrows("Case $index", BackupException.Malformed::class.java) { crypto.parse(bytes) }
         }
+    }
+
+    /** A file as the 08 build wrote it: version 1, the payload a bare array of items. */
+    private fun version1File(items: List<BackupItem>): ByteArray {
+        val encoder = Base64.getEncoder()
+        val salt = ByteArray(SALT_SIZE_BYTES) { it.toByte() }
+        val iv = ByteArray(IV_SIZE_BYTES) { it.toByte() }
+        val kdf = BackupKdf(BACKUP_KDF_TYPE, params.memoryKib, params.iterations, params.parallelism, encoder.encodeToString(salt))
+        val header = BackupHeader(BACKUP_FORMAT, BACKUP_VERSION_CREDENTIALS_ONLY, kdf, BACKUP_CIPHER, encoder.encodeToString(iv))
+        val key = Pbkdf2KeyDerivation().derivePasswordKey(password.toCharArray(), salt, params)
+        val ciphertext = aesGcmCipher(Cipher.ENCRYPT_MODE, key, iv, Json.encodeToString(header).encodeToByteArray())
+            .doFinal(Json.encodeToString(items).encodeToByteArray())
+        val file = BackupFile(header.format, header.version, kdf, header.cipher, header.iv, encoder.encodeToString(ciphertext))
+        return Json.encodeToString(file).encodeToByteArray()
     }
 
     private fun ByteArray.toBackupFile(): BackupFile = Json.decodeFromString(decodeToString())
