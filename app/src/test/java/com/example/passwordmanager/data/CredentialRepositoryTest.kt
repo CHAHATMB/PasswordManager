@@ -6,6 +6,7 @@ import androidx.test.core.app.ApplicationProvider
 import com.example.passwordmanager.data.crypto.Pbkdf2KeyDerivation
 import com.example.passwordmanager.data.crypto.TEST_KDF_PARAMS
 import com.example.passwordmanager.data.crypto.VaultCrypto
+import com.example.passwordmanager.data.vault.VaultException
 import com.example.passwordmanager.data.vault.VaultHeaderStore
 import com.example.passwordmanager.data.vault.VaultSession
 import com.example.passwordmanager.data.vault.VaultState
@@ -64,8 +65,8 @@ class CredentialRepositoryTest {
 
         try {
             repository.upsertCredential(credential("github.com"))
-            fail("Expected IllegalStateException")
-        } catch (expected: IllegalStateException) {
+            fail("Expected VaultException.Locked")
+        } catch (expected: VaultException.Locked) {
         }
     }
 

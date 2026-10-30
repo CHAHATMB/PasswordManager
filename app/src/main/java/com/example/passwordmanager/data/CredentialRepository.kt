@@ -1,5 +1,7 @@
 package com.example.passwordmanager.data
 
+import android.database.SQLException
+import com.example.passwordmanager.data.vault.VaultException
 import com.example.passwordmanager.data.vault.VaultSession
 import com.example.passwordmanager.data.vault.VaultState
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -13,9 +15,11 @@ class CredentialRepository(private val session: VaultSession) {
 
     fun getOrderedByDateCreated(): Flow<List<Credential>> = whileUnlocked { it.getOrderedByDateCreated() }
 
-    suspend fun upsertCredential(credential: Credential) = requireDao().upsertCredential(credential)
+    /** Throws [VaultException.Locked] when locked, including a lock that closes the DB mid-write. */
+    suspend fun upsertCredential(credential: Credential) = write { it.upsertCredential(credential) }
 
-    suspend fun deleteCredential(credential: Credential) = requireDao().deleteCredential(credential)
+    /** Throws [VaultException.Locked] when locked, including a lock that closes the DB mid-write. */
+    suspend fun deleteCredential(credential: Credential) = write { it.deleteCredential(credential) }
 
     @OptIn(ExperimentalCoroutinesApi::class)
     private fun whileUnlocked(query: (CredentialDao) -> Flow<List<Credential>>): Flow<List<Credential>> =
@@ -23,9 +27,18 @@ class CredentialRepository(private val session: VaultSession) {
             if (state is VaultState.Unlocked) query(state.database.dao) else flowOf(emptyList())
         }
 
-    private fun requireDao(): CredentialDao {
-        val state = session.state.value
-        check(state is VaultState.Unlocked) { "Vault is locked" }
-        return state.database.dao
+    private suspend fun write(action: suspend (CredentialDao) -> Unit) {
+        val state = session.state.value as? VaultState.Unlocked ?: throw VaultException.Locked()
+        try {
+            action(state.database.dao)
+        } catch (e: IllegalStateException) {
+            throw lockedOr(e)
+        } catch (e: SQLException) {
+            throw lockedOr(e)
+        }
     }
+
+    // A closed DB surfaces as IllegalStateException or SQLException; only a lock explains it.
+    private fun lockedOr(e: Exception): Exception =
+        if (session.state.value is VaultState.Unlocked) e else VaultException.Locked(e)
 }

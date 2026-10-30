@@ -8,6 +8,7 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.passwordmanager.PasswordManagerApp
 import com.example.passwordmanager.data.Credential
 import com.example.passwordmanager.data.CredentialRepository
+import com.example.passwordmanager.data.vault.VaultException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -62,9 +63,7 @@ class CredentialViewModel(private val repository: CredentialRepository) : ViewMo
         when(event){
 
             is CredentialEvent.DeleteCredential -> {
-                viewModelScope.launch{
-                    repository.deleteCredential(event.credential)
-                }
+                write { repository.deleteCredential(event.credential) }
             }
             is CredentialEvent.SaveCredential -> {
                 if (!isCredentialFormValid(event.website, event.password)) return
@@ -72,17 +71,13 @@ class CredentialViewModel(private val repository: CredentialRepository) : ViewMo
                     website = event.website, username = event.username, password = event.password,
                     note = event.note.orEmpty(), dataCreate = System.currentTimeMillis()
                 )
-                viewModelScope.launch {
-                    repository.upsertCredential(credential)
-                }
+                write { repository.upsertCredential(credential) }
             }
             is CredentialEvent.SortCredentail -> {
                 isSortedByDateCreate.value = !isSortedByDateCreate.value
             }
             is CredentialEvent.FavoriteCredential ->{
-                viewModelScope.launch {
-                    repository.upsertCredential(event.credential.copy(isFav = !event.credential.isFav))
-                }
+                write { repository.upsertCredential(event.credential.copy(isFav = !event.credential.isFav)) }
             }
 
             is CredentialEvent.OnSearchTextChange -> {
@@ -96,6 +91,16 @@ class CredentialViewModel(private val repository: CredentialRepository) : ViewMo
             }
 
             else -> {}
+        }
+    }
+
+    private fun write(action: suspend () -> Unit) {
+        viewModelScope.launch {
+            try {
+                action()
+            } catch (e: VaultException.Locked) {
+                // The vault locked before or during the write; the write is dropped.
+            }
         }
     }
 
