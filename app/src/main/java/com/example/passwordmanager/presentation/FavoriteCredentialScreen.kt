@@ -66,7 +66,8 @@ fun FavoriteCredentialScreen(
 
 @Composable
 fun FavCredentialItem(state: CredentialState, index: Int, onEvent: (CredentialEvent) -> Unit) {
-    if( state.credentials.get(index = index).isFav ) {
-        CredentialItem(state = state, index = index, lockState = false, onEvent = onEvent )
+    val credential = state.credentials[index]
+    if( credential.isFav ) {
+        CredentialItem(credential = credential, onEvent = onEvent)
     }
 }
