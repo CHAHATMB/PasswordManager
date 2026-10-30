@@ -14,6 +14,7 @@ import com.example.passwordmanager.data.vault.VaultSession
 import com.example.passwordmanager.data.vault.VaultState
 import com.example.passwordmanager.presentation.MasterPasswordError
 import com.example.passwordmanager.presentation.validateMasterPassword
+import java.io.IOException
 import java.security.GeneralSecurityException
 import java.security.ProviderException
 import javax.crypto.Cipher
@@ -96,7 +97,13 @@ class LockViewModel(
 
     private fun turnOffBiometric(error: LockError): Cipher? {
         _state.update { it.copy(error = error) }
-        viewModelScope.launch { session.disableBiometric() }
+        viewModelScope.launch {
+            try {
+                session.disableBiometric()
+            } catch (e: IOException) {
+                // The header write failed; the blob stays, so the next lock retries and fails the same way.
+            }
+        }
         return null
     }
 
