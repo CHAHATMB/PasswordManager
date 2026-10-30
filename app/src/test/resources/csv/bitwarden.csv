@@ -1,0 +1,6 @@
+folder,favorite,type,name,notes,fields,reprompt,login_uri,login_username,login_password,login_totp
+,1,login,GitHub,"multi
+line ""note""",,0,https://github.com/,alice,gh-secret-1,
+Work,,login,Example,,,0,"https://example.com/login,https://alt.example.com/",bob,"ex,pass-2",
+,,note,Secure note,secret text,,0,,,,
+,,login,No password,,,0,https://nopass.example.org/,carol,,

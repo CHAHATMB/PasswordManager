@@ -1,0 +1,6 @@
+name,url,username,password,note
+github.com,https://github.com/login,alice,"gh,secret""1","line one
+line two, with comma"
+Example,https://www.example.com/,bob@example.com,ex-pass-2,
+No password,https://nopass.example.org/,carol,,orphan note
+Android app,android://AbCd123@com.example.app/,dave,app pass 4 ,"=SUM(A1)"
