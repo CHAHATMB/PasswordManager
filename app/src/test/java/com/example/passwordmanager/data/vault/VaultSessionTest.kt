@@ -96,6 +96,21 @@ class VaultSessionTest {
     }
 
     @Test
+    fun verifyMasterPasswordAcceptsOnlyTheMasterPasswordAndKeepsTheVaultUnlocked() = runTest {
+        val session = newSession()
+        session.setup(password.toCharArray())
+
+        session.verifyMasterPassword(password.toCharArray())
+        try {
+            session.verifyMasterPassword("wrong password!!".toCharArray())
+            fail("Expected VaultException.WrongPassword")
+        } catch (expected: VaultException.WrongPassword) {
+        }
+
+        assertTrue(session.state.value is VaultState.Unlocked)
+    }
+
+    @Test
     fun lockClosesDatabaseAndWipesItsKey() = runTest {
         val session = newSession()
         session.setup(password.toCharArray())

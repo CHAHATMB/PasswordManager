@@ -82,6 +82,12 @@ class VaultSession(
         }
     }
 
+    /** Re-authentication: throws [VaultException.WrongPassword] unless [password] is the master password. */
+    suspend fun verifyMasterPassword(password: CharArray) {
+        val header = loadHeader()
+        withContext(Dispatchers.Default) { crypto.unlock(password, header).fill(0) }
+    }
+
     /** Closes the DB and wipes the keys. If an unlock is in flight, it locks again when done. */
     fun lock() {
         lockRequests.incrementAndGet()
