@@ -21,6 +21,18 @@
   - Edit mode with a non-catalog website (e.g. "My Bank") shows matches once focused; that is intended (the list only hides on an exact domain).
   - Catalog domains were written from knowledge, not verified online; a few (e.g. `enps.nsdl.com`, `abha.abdm.gov.in`) are worth a spot check.
 
+## Round 1 fixes (review round 1)
+- Commits:
+  - 249debc fix: update stale catalog domains
+  - f330db9 fix: align catalog tests with new hosts and trim overlap
+- Addressed:
+  - #1: 24 domestic banks moved to `.bank.in`. Each host was checked through the old site's redirect, a TLS cert, or a live response on the new host. SBI is `onlinesbi.sbi.bank.in`. SBI Card (an NBFC) and the foreign banks are unchanged.
+  - #2 HBO Max `hbomax.com`. #3 `threads.com`. #4 `enps.nps-proteantech.in`. #5 Skype removed. #6 `microsoft365.com`. The catalog now has 287 entries.
+  - #7: the `git` test asserts only `first()`, and `exactDomainIsFirst` is merged into the normalisation test (17 tests).
+  - #8: left as is. The fallback is deliberate and harmless.
+- Gap: Yes Bank stays on `yesbank.in`. I could not confirm its `.bank.in` host: neither the old nor the candidate hosts responded, and search found no URL.
+- Build/test: `./gradlew assembleDebug testDebugUnitTest --tests '*WebsiteCatalog*'` → PASS
+
 ## Round 2 (fixes from review/verify)
 - Addressed findings:
 - Commits:
