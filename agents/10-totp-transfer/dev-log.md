@@ -1,15 +1,47 @@
-# Dev Log – <Feature name>
+# Dev Log – TOTP import and export
 
 ## Round 1
-- Base commit: <sha before work started>
-- Commits:
-  - <sha> <subject>
+- Base commit: 1ca3dba (branch `scratch/STRY-10-totp-transfer`)
+- Commits (review range `1ca3dba..HEAD`):
+  - 1a282bf fix: accept setup keys pasted with tabs or line breaks (09 follow-up)
+  - 43274a4 fix: mask the setup key field with a show/hide toggle (09 follow-up)
+  - a0a02d1 fix: show the TOTP code under the account so long codes don't truncate the issuer (09 follow-up)
+  - 1ceed7a fix: use a plurals resource for the TOTP countdown description (09 follow-up)
+  - cf03e91 feat: decode Google Authenticator transfer QR payloads
+  - 9105ef6 test: cover the protobuf reader and migration payload decoding
+  - 9634df3 feat: import Google Authenticator transfer codes from the scanner and images
+  - 7f5484f refactor: move the backup password dialog to shared components
+  - 98466a7 feat: export authenticator accounts as otpauth QR codes after re-authentication
+  - 04f1e89 fix: keep an issuer containing a colon intact when parsing account labels
+  - 36ea0ca test: cover the export re-auth gate, paging and lock reset
+  - plus the `docs:` commit for this log
 - Summary of changes:
+  - 09 follow-ups: `Base32.decode` ignores all whitespace (`isWhitespace()`), not only spaces. The setup-key field is a `PasswordTextField` (masked, show/hide), which gained an `error` parameter. The TOTP code moved from the trailing slot to a new optional `ItemRow.footer` under the account name, so only the countdown and menu sit beside the title. The countdown description uses `plurals/totp_new_code_in`.
+  - `util/totp/ProtobufReader.kt` (internal): varint (max 10 bytes), length-delimited with a bounds check, skips wire types 0/1/2/5, throws `ProtobufException` for everything else (groups, field 0, truncation).
+  - `util/totp/MigrationPayload.kt`: `parse` → `MigrationResult.Batch(accounts, skipped, batchIndex, batchSize, batchId)` / `NotMigrationUri` / `MalformedPayload`. Percent-decode, then Base64 that also accepts a raw `+`, the URL-safe alphabet and missing padding. 8 KB URI cap, max 100 entries. Every entry goes through `OtpAuthAccount.create`, which validates it like manual entry. HOTP, MD5, unspecified type, unknown digits and invalid secrets are counted in `skipped`. The secret and payload byte arrays are zeroed.
+  - Import UI: the scanner and "Scan from image" try `MigrationPayload` first. Preview dialog: issuer + account per entry (no secrets), plus "Code k of n" and the unsupported count. Import uses `insertSkippingDuplicates`, then shows "Imported X, Y already in Vaultly, Z not supported…". With more codes to come, the title reads "Code k of n imported" and a "Scan next code" button reopens the same source (camera or image). The add sheet has "Import from Google Authenticator" with the how-to and two buttons, From image and Scan code. A malformed payload shows "This transfer code couldn't be read. Nothing was imported." A code with only unsupported entries goes straight to the result.
+  - Export: the Authenticator top bar has an overflow menu "Export accounts", shown only with accounts. It opens route `TOTP_EXPORT`, where `TotpExportViewModel` (scoped to the back stack entry) runs Warning dialog → master password (`PasswordDialog`, `VaultSession.verifyMasterPassword`) → pages. Each page shows "k of n", the issuer/account, the QR (`util/QrCodeEncoder`, zxing `BarcodeEncoder`, 768 px black on white, shown at 264 dp without filtering), the warning chip for non-SHA1/6/30, "Show setup key" (groups of 4, monospace) and Previous/Next. Only the visible page's bitmap exists; it is rendered on `Dispatchers.Default`. Accounts load only after a successful re-auth. On a lock or `onCleared`, the state resets to Warning and the list is dropped. The bottom bar is hidden on this route. The window is already FLAG_SECURE, and both dialogs are `SecureOn`.
+  - `TotpAccount.toOtpAuthAccount()` feeds `OtpAuthUri.build`.
 - Decisions / deviations from brief:
-- Unit tests added:
-- Build/test result: `./gradlew assembleDebug testDebugUnitTest` → PASS/FAIL
+  - The warning and re-auth dialogs show on the export route (over its empty Scaffold), not on the Authenticator tab. That way the re-auth gate lives in the export VM, as the brief's test asks, and cancelling either dialog pops the route.
+  - Name splitting follows the 09 otpauth rule (new shared `splitLabel`), not only "when the issuer is blank". Google exports often have name `Issuer:account` *and* issuer `Issuer`, and without the split the account would show the prefix twice.
+  - Found while writing the brief's build tests: 09's `parse` split an issuer containing `:` at its own colon, so export → re-import broke it. Now, when the label starts with `"<issuer param>:"`, only that prefix is removed (`fix:` commit). Still a limitation: an account name containing `:` with *no* issuer is ambiguous in the format and gets split.
+  - `skipped` also counts entries with invalid secrets or digits, not only HOTP/MD5. The UI says "not supported (counter-based or invalid)".
+  - Bitmaps are dropped, not `recycle()`d, since Compose may still be drawing the last frame.
+  - The old back stack entry's VM is not cleared on lock: the NavController's store outlives the VaultShell composition. Its state is wiped by the lock collector instead, and after unlock a new NavController starts at Home.
+  - Setup-key toggle reuses `PasswordTextField`, so its content description reads "Show password". The keyboard capitalisation hint was dropped (decode uppercases anyway).
+- Unit tests added: `ProtobufReaderTest` (varints incl. 10-byte, >10 rejected, tags, skip of each wire type, 8 truncation/invalid cases), `MigrationPayloadTest` (research vector → exact fields and batch fields; mapping via `toTotpAccount` with codes = `996554` at t=59 and RFC SHA256/8; `%2B %2F %3D`, raw, unpadded, URL-safe; 3 accounts + batch 1 of 3 + negative id; HOTP/MD5/unspecified/odd digits/empty secret skipped; `Issuer:account` split incl. issuer with colon; unknown fields in both messages; 11 malformed inputs incl. truncation, garbage, >8 KB, 101 entries; wrong scheme), `TotpExportViewModelTest` (password ignored before warning, wrong password keeps Password step and never encodes, correct password pages 1/2 → 2/2 with warning flag, key toggle, re-encoded URIs parse back to the stored accounts, lock resets to Warning, empty vault), `OtpAuthUriTest` (+ exact build output with `%20`/`%3A` and blank issuer omitted; round trip for 3 algorithms × 2 digits × 4 periods), `Base32Test` (+ tabs/CRLF/NBSP).
+- Build/test result: `./gradlew assembleDebug testDebugUnitTest` → PASS (200 tests, 0 failures).
 - Notes for reviewer/verifier:
-
-## Round 2 (fixes from review/verify)
-- Addressed findings:
-- Commits:
+  - Test QR PNGs (`pip install qrcode pillow`), then `adb push *.png /sdcard/Download/` and FAB → Scan from image:
+    - Research vector: `python3 -c "import qrcode; qrcode.make('otpauth-migration://offline?data=Ci4KCkhlbGxvId6tvu8SEWFsaWNlQGV4YW1wbGUuY29tGgdFeGFtcGxlIAEoATACCioKFDEyMzQ1Njc4OTAxMjM0NTY3ODkwEgNib2IaB0FDTUUgQ28gAigCMAIQARgBIAAowMQH').save('migration.png')"`
+    - 2-batch export (code 1 has one TOTP and one HOTP entry, code 2 has one TOTP entry), same command with these two URIs, saved as `batch1.png` and `batch2.png`:
+      - `otpauth-migration://offline?data=Ci8KD2JhdGNoLW9uZS1rZXktMRIPb25lQGV4YW1wbGUuY29tGgVCYXRjaCABKAEwAgooCgdjb3VudGVyEhBob3RwQGV4YW1wbGUuY29tGgVCYXRjaCABKAEwARABGAIgACiJBg%3D%3D`
+      - `otpauth-migration://offline?data=Ci8KD2JhdGNoLXR3by1rZXktMhIPdHdvQGV4YW1wbGUuY29tGgVCYXRjaCABKAEwAhABGAIgASiJBg%3D%3D`
+      - Expected for code 1: "Code 1 of 2 imported", "Imported 1, 0 already in Vaultly, 1 not supported…" and "Scan next code". Code 2: "Code 2 of 2 imported" and OK.
+    - Truncated: the research URI with its last 4 characters removed (`…IAAo`) → "This transfer code couldn't be read".
+  - Reference codes: `oathtool --totp -b JBSWY3DPEHPK3PXP` and `oathtool --totp=sha256 -d 8 -b GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ`.
+  - Export SHA512/8 warning: add an account manually with Advanced → SHA512, 8 digits.
+  - Exported QR check: FLAG_SECURE blocks screenshots, so photograph the screen with a second device (or use a FLAG_SECURE-off debug edit, then revert it) and run `zbarimg`. Expected: `otpauth://totp/<issuer>:<account>?secret=…&issuer=…&algorithm=…&digits=…&period=…`.
+  - The research vector's ACME entry has 8 digits / SHA256, so its export page shows the compatibility warning. That is expected.
+  - The camera "Scan QR code" prompt still says "shown by the website" for transfer codes too (left as is).

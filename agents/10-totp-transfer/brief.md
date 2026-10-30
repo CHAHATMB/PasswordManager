@@ -1,6 +1,6 @@
 # TOTP import and export
 
-Status: PLANNED
+Status: IN_REVIEW
 Backlog ID: 10
 
 ## Goal
