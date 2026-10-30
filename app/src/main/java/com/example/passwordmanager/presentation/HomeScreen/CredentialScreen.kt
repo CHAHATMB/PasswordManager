@@ -78,7 +78,7 @@ fun CredentialScreen(
                         color = MaterialTheme.colorScheme.primary
                     )
                     IconButton(onClick = { onEvent(CredentialEvent.SortCredential) }) {
-                        Icon(imageVector = Icons.Rounded.Sort, contentDescription = null, modifier = Modifier.size(35.dp), tint = MaterialTheme.colorScheme.secondary)
+                        Icon(imageVector = Icons.Rounded.Sort, contentDescription = "Sort by date or website", modifier = Modifier.size(35.dp), tint = MaterialTheme.colorScheme.secondary)
                     }
                     IconButton(onClick = { navController.navigate(NavigationItem.Settings.route) }) {
                         Icon(imageVector = Icons.Rounded.Settings, contentDescription = "Settings", tint = MaterialTheme.colorScheme.secondary)
@@ -169,10 +169,9 @@ fun CredentialItem(credential: Credential, onEvent: (CredentialEvent) -> Unit, o
                 onEvent(CredentialEvent.FavoriteCredential(credential))
             }) {
                 if( credential.isFav ) {
-                    Icon(imageVector = Icons.Rounded.Favorite, contentDescription = null, modifier = Modifier.size(24.dp)
-                    )
+                    Icon(imageVector = Icons.Rounded.Favorite, contentDescription = "Remove from favourites", modifier = Modifier.size(24.dp))
                 } else {
-                    Icon(imageVector = Icons.Rounded.FavoriteBorder, contentDescription=null, modifier = Modifier.size(24.dp))
+                    Icon(imageVector = Icons.Rounded.FavoriteBorder, contentDescription = "Add to favourites", modifier = Modifier.size(24.dp))
                 }
             }
 

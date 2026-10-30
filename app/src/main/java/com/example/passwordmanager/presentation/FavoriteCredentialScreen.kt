@@ -47,7 +47,7 @@ fun FavoriteCredentialScreen(
                     color = MaterialTheme.colorScheme.primary
                 )
                 IconButton(onClick = { onEvent(CredentialEvent.SortCredential) }) {
-                    Icon(imageVector = Icons.Rounded.Sort, contentDescription = null, modifier = Modifier.size(35.dp), tint = MaterialTheme.colorScheme.secondary)
+                    Icon(imageVector = Icons.Rounded.Sort, contentDescription = "Sort by date or website", modifier = Modifier.size(35.dp), tint = MaterialTheme.colorScheme.secondary)
                 }
             }
         }
