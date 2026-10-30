@@ -149,14 +149,14 @@ private fun PasswordDialog(
                 PasswordTextField(
                     value = password,
                     onValueChange = { password = it },
-                    placeholder = "Password",
+                    label = "Password",
                     modifier = Modifier.fillMaxWidth()
                 )
                 if (withConfirmation) {
                     PasswordTextField(
                         value = confirmation,
                         onValueChange = { confirmation = it },
-                        placeholder = "Confirm password",
+                        label = "Confirm password",
                         modifier = Modifier.fillMaxWidth()
                     )
                 }

@@ -23,7 +23,7 @@ fun UnlockScreen(
         PasswordTextField(
             value = password,
             onValueChange = { password = it },
-            placeholder = "Master password",
+            label = "Master password",
             modifier = Modifier.fillMaxWidth(),
             enabled = !state.isWorking
         )

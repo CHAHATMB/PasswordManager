@@ -10,7 +10,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.dp
+import com.example.passwordmanager.ui.theme.Spacing
+import com.example.passwordmanager.ui.theme.extendedColors
 import com.example.passwordmanager.util.PasswordStrength
 
 @Composable
@@ -21,7 +22,7 @@ fun PasswordStrengthIndicator(password: String, modifier: Modifier = Modifier) {
 @Composable
 fun PasswordStrengthIndicator(strength: PasswordStrength, modifier: Modifier = Modifier) {
     val color = strength.color()
-    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
         LinearProgressIndicator(
             progress = { (strength.ordinal + 1f) / PasswordStrength.entries.size },
             modifier = Modifier.fillMaxWidth(),
@@ -32,9 +33,9 @@ fun PasswordStrengthIndicator(strength: PasswordStrength, modifier: Modifier = M
     }
 }
 
+@Composable
 private fun PasswordStrength.color(): Color = when (this) {
-    PasswordStrength.Weak -> Color(0xFFC62828)
-    PasswordStrength.Fair -> Color(0xFFEF6C00)
-    PasswordStrength.Good -> Color(0xFF9E9D24)
-    PasswordStrength.Strong -> Color(0xFF2E7D32)
+    PasswordStrength.Weak -> MaterialTheme.colorScheme.error
+    PasswordStrength.Fair -> MaterialTheme.extendedColors.warning
+    PasswordStrength.Good, PasswordStrength.Strong -> MaterialTheme.extendedColors.success
 }

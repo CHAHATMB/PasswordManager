@@ -34,7 +34,7 @@ fun SetupScreen(
         PasswordTextField(
             value = password,
             onValueChange = { password = it },
-            placeholder = "Master password",
+            label = "Master password",
             modifier = Modifier.fillMaxWidth(),
             enabled = !state.isWorking
         )
@@ -51,7 +51,7 @@ fun SetupScreen(
         PasswordTextField(
             value = confirmation,
             onValueChange = { confirmation = it },
-            placeholder = "Confirm master password",
+            label = "Confirm master password",
             modifier = Modifier.fillMaxWidth(),
             enabled = !state.isWorking
         )

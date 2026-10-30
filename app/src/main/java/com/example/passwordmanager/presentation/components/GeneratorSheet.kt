@@ -27,10 +27,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.SecureFlagPolicy
+import com.example.passwordmanager.ui.theme.Spacing
 import com.example.passwordmanager.util.CharacterClass
 import com.example.passwordmanager.util.GeneratorOptions
 import com.example.passwordmanager.util.MAX_GENERATED_LENGTH
@@ -62,14 +60,14 @@ fun GeneratorSheet(onUse: (String) -> Unit, onDismiss: () -> Unit) {
             modifier = Modifier
                 .verticalScroll(rememberScrollState())
                 .navigationBarsPadding()
-                .padding(horizontal = 24.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+                .padding(horizontal = Spacing.xl, vertical = Spacing.s),
+            verticalArrangement = Arrangement.spacedBy(Spacing.s)
         ) {
-            Text(text = "Generate password", fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.primary)
-            Text(text = preview, fontFamily = FontFamily.Monospace, fontSize = 18.sp)
+            Text(text = "Generate password", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+            Text(text = preview, style = MaterialTheme.typography.titleMedium, fontFamily = FontFamily.Monospace)
             PasswordStrengthIndicator(password = preview)
 
-            Text(text = "Length: ${options.length}")
+            Text(text = "Length: ${options.length}", style = MaterialTheme.typography.bodyMedium)
             Slider(
                 value = options.length.toFloat(),
                 onValueChange = {
@@ -100,7 +98,7 @@ fun GeneratorSheet(onUse: (String) -> Unit, onDismiss: () -> Unit) {
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.End)
+                horizontalArrangement = Arrangement.spacedBy(Spacing.l, Alignment.End)
             ) {
                 OutlinedButton(onClick = { update(options) }) {
                     Text(text = "Regenerate")

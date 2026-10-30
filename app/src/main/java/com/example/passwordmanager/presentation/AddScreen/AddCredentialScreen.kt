@@ -129,7 +129,7 @@ private fun TextFields(
                 PasswordTextField(
                     value = password,
                     onValueChange = { password = it },
-                    placeholder = "Password",
+                    label = "Password",
                     modifier = Modifier.fillMaxWidth(),
                     onGenerate = { isGeneratorOpen = true }
                 )
