@@ -2,6 +2,7 @@ package com.example.passwordmanager.presentation.LockScreen
 
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.Button
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -26,8 +27,14 @@ fun UnlockScreen(
             modifier = Modifier.fillMaxWidth(),
             enabled = !state.isWorking
         )
+        if (state.retryInSeconds > 0) {
+            Text(
+                text = "Too many wrong attempts. Try again in ${state.retryInSeconds} s",
+                color = MaterialTheme.colorScheme.error
+            )
+        }
         Button(
-            enabled = !state.isWorking && password.isNotEmpty(),
+            enabled = !state.isWorking && password.isNotEmpty() && state.retryInSeconds == 0,
             onClick = {
                 onUnlock(password)
                 password = ""

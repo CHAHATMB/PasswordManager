@@ -8,6 +8,7 @@ import com.example.passwordmanager.data.CredentialDatabase
 import com.example.passwordmanager.data.crypto.Pbkdf2KeyDerivation
 import com.example.passwordmanager.data.crypto.TEST_KDF_PARAMS
 import com.example.passwordmanager.data.crypto.VaultCrypto
+import com.example.passwordmanager.data.vault.UnlockThrottle
 import com.example.passwordmanager.data.vault.VaultHeaderStore
 import com.example.passwordmanager.data.vault.VaultSession
 import com.example.passwordmanager.data.vault.VaultState
@@ -51,7 +52,7 @@ class LockViewModelTest {
 
     @Test
     fun shortPasswordMapsToPasswordTooShort() {
-        val viewModel = LockViewModel(newSession())
+        val viewModel = newViewModel(newSession())
 
         viewModel.setup("short", "short")
 
@@ -60,7 +61,7 @@ class LockViewModelTest {
 
     @Test
     fun mismatchedConfirmationMapsToPasswordMismatch() {
-        val viewModel = LockViewModel(newSession())
+        val viewModel = newViewModel(newSession())
 
         viewModel.setup(password, password + "x")
 
@@ -70,7 +71,7 @@ class LockViewModelTest {
     @Test
     fun wrongUnlockMapsToWrongPasswordAndStopsWorking() = runTest {
         newSession().setup(password.toCharArray())
-        val viewModel = LockViewModel(newSession())
+        val viewModel = newViewModel(newSession())
 
         viewModel.unlock("wrong password!!")
 
@@ -80,7 +81,7 @@ class LockViewModelTest {
 
     @Test
     fun databaseFailureMapsToUnexpected() = runTest {
-        val viewModel = LockViewModel(newSession(openDatabase = { throw SQLiteException("file is not a database") }))
+        val viewModel = newViewModel(newSession(openDatabase = { throw SQLiteException("file is not a database") }))
 
         viewModel.setup(password, password)
 
@@ -91,13 +92,16 @@ class LockViewModelTest {
     @Test
     fun correctUnlockClearsErrorAndUnlocks() = runTest {
         newSession().setup(password.toCharArray())
-        val viewModel = LockViewModel(newSession())
+        val viewModel = newViewModel(newSession())
 
         viewModel.unlock(password)
 
         assertNull(viewModel.state.first { !it.isWorking }.error)
         assertTrue(viewModel.vaultState.value is VaultState.Unlocked)
     }
+
+    private fun newViewModel(session: VaultSession) =
+        LockViewModel(session, UnlockThrottle())
 
     private fun newSession(
         openDatabase: (ByteArray) -> CredentialDatabase = {
