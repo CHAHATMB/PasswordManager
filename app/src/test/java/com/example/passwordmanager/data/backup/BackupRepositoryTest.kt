@@ -127,7 +127,7 @@ class BackupRepositoryTest {
         session.setup("correct horse battery staple".toCharArray())
         val credentials = CredentialRepository(session)
         // Within the bounds BackupCrypto.parse enforces; the PBKDF2 stand-in reads iterations only.
-        val backupParams = KdfParams(memoryKib = 0, iterations = 10, parallelism = 1)
+        val backupParams = KdfParams(memoryKib = 16, iterations = 10, parallelism = 1)
         return BackupRepository(context.contentResolver, credentials, BackupCrypto(Pbkdf2KeyDerivation()), backupParams) { now } to credentials
     }
 

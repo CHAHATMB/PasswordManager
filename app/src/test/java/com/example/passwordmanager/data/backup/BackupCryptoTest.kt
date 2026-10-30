@@ -17,7 +17,7 @@ class BackupCryptoTest {
 
     private val crypto = BackupCrypto(Pbkdf2KeyDerivation())
     // Within the Argon2 bounds that parse() enforces; the PBKDF2 stand-in reads iterations only.
-    private val params = KdfParams(memoryKib = 0, iterations = 10, parallelism = 1)
+    private val params = KdfParams(memoryKib = 16, iterations = 10, parallelism = 1)
     private val password = "export password 1"
     private val items = listOf(
         BackupItem("github.com", "alice", "gh-secret-1", "line one\nline two, \"quoted\"", favorite = true, created = 1),
@@ -109,12 +109,14 @@ class BackupCryptoTest {
     }
 
     @Test
-    fun missingFieldsUnknownCipherOrHugeKdfParamsAreMalformed() {
+    fun missingFieldsUnknownCipherOrOutOfRangeKdfParamsAreMalformed() {
         val file = crypto.encrypt(items, password.toCharArray(), params)
         val invalid = listOf(
             "{\"format\":\"pm-export\",\"version\":1}".encodeToByteArray(),
             file.edit { it.copy(cipher = "AES-128-CBC") },
-            file.edit { it.copy(kdf = it.kdf.copy(memoryKiB = 4 * 1024 * 1024)) },
+            file.edit { it.copy(kdf = it.kdf.copy(memoryKiB = 128 * 1024 + 1)) },
+            file.edit { it.copy(kdf = it.kdf.copy(memoryKiB = 0)) },
+            file.edit { it.copy(kdf = it.kdf.copy(memoryKiB = 8 * 4 - 1, parallelism = 4)) },
             file.edit { it.copy(kdf = it.kdf.copy(iterations = 0)) },
             file.edit { it.copy(iv = "not base64!") },
             file.edit { it.copy(iv = Base64.getEncoder().encodeToString(ByteArray(8))) }

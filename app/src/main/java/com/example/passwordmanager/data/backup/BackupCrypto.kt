@@ -20,8 +20,10 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.intOrNull
 
-// Upper bounds for KDF parameters read from a file, so a crafted file can't exhaust memory or time.
-private const val MAX_KDF_MEMORY_KIB = 262144
+// Bounds for KDF parameters read from a file, so a crafted file can't exhaust memory or time.
+// The app writes at most 64 MiB; Argon2 needs at least 8 KiB per lane.
+private const val MAX_KDF_MEMORY_KIB = 131072
+private const val MIN_KDF_MEMORY_KIB_PER_LANE = 8
 private const val MAX_KDF_ITERATIONS = 20
 private const val MAX_KDF_PARALLELISM = 16
 
@@ -85,9 +87,9 @@ class BackupCrypto(
         if (backup.cipher != BACKUP_CIPHER || kdf.type != BACKUP_KDF_TYPE) {
             throw BackupException.Malformed("Unsupported cipher or key derivation")
         }
-        if (kdf.memoryKiB !in 0..MAX_KDF_MEMORY_KIB ||
-            kdf.iterations !in 1..MAX_KDF_ITERATIONS ||
-            kdf.parallelism !in 1..MAX_KDF_PARALLELISM
+        if (kdf.parallelism !in 1..MAX_KDF_PARALLELISM ||
+            kdf.memoryKiB !in MIN_KDF_MEMORY_KIB_PER_LANE * kdf.parallelism..MAX_KDF_MEMORY_KIB ||
+            kdf.iterations !in 1..MAX_KDF_ITERATIONS
         ) {
             throw BackupException.Malformed("Key derivation parameters are out of range")
         }
