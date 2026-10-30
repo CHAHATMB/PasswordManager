@@ -48,3 +48,9 @@ Users can generate a strong random password from inside the add and edit forms. 
 
 ## Dependencies
 - 01 (setup screen). 03 (edit form).
+
+## Carried over from 03 review/verify
+- [ ] Home list rows must not scroll under/overlap the search field (CredentialScreen.kt: give search a background or move it out of the list's content padding)
+- [ ] Edit screen: Save reachable/visible with keyboard open; bottom bar + FAB must not float above the keyboard
+- [ ] Double tap on Edit in Detail must not open Edit twice
+- [ ] Delete in flight when Lock is tapped must not offer Undo after unlock
