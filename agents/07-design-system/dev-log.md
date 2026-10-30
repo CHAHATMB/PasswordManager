@@ -46,4 +46,10 @@
 
 ## Round 2 (fixes from review/verify)
 - Addressed findings:
+  - Review #1: `CredentialState.isLoaded` (false initially, true on every DB emission in `CredentialViewModel`). Home and Favorites show nothing until loaded, so "Your vault is empty" no longer flashes after unlock.
+  - Review #2: `AppTheme(darkTheme: Boolean)`; `MainActivity` resolves `ThemeMode` → dark/light, so `ui/theme` no longer imports `data/`.
+  - Skipped #3 (copy of themeMode in `SettingsState` matches the `autoLockTimeout` pattern) and #4 (icon-size token; only 3 literals, allowed by the brief).
 - Commits:
+  - d760e7e fix: show the empty states only after the list has loaded
+  - 61f9c85 fix: resolve the theme mode in MainActivity so ui/theme has no data dependency
+- Build/test result: `./gradlew assembleDebug testDebugUnitTest` → PASS (135 tests, 0 failures).
