@@ -8,21 +8,14 @@ import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.biometric.BiometricPrompt
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.ModalBottomSheetDefaults
 import androidx.compose.material3.NavigationBar
@@ -42,13 +35,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.window.SecureFlagPolicy
-import androidx.compose.ui.unit.dp
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.withResumed
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -81,7 +70,6 @@ import com.example.passwordmanager.presentation.SettingsScreen.SettingsScreen
 import com.example.passwordmanager.presentation.SettingsScreen.SettingsViewModel
 import com.example.passwordmanager.presentation.components.rememberIsKeyboardOpen
 import com.example.passwordmanager.ui.theme.AppTheme
-import com.example.passwordmanager.ui.theme.shapes.BottomNavCustomShape
 import com.example.passwordmanager.util.BiometricPromptUtils
 import javax.crypto.Cipher
 import kotlinx.coroutines.flow.collectLatest
@@ -206,46 +194,42 @@ class MainActivity : FragmentActivity() {
                 }
             }
         }
-        Scaffold(modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background),
+        // Hidden on Edit and while typing (e.g. Home search): with adjustResize the bar and
+        // FAB would ride above the keyboard.
+        val isBottomBarVisible = currentRoute != CredentialRoutes.EDIT && !isKeyboardOpen
+        val isFabVisible = isBottomBarVisible &&
+            (currentRoute == NavigationItem.Home.route || currentRoute == NavigationItem.Favorite.route)
+        Scaffold(modifier = Modifier.fillMaxSize(),
             snackbarHost = { SnackbarHost(snackbarHostState) },
             bottomBar = {
-                // Hidden on Edit and while typing (e.g. Home search): with adjustResize the bar and
-                // FAB would ride above the keyboard.
-                if (currentRoute != CredentialRoutes.EDIT && !isKeyboardOpen) MyBottomAppBarWithFab(
-                    content = {
-                        NavigationBar {
-                            listOf(NavigationItem.Home, NavigationItem.Favorite).forEach { item ->
-                                val isSelected = currentRoute == item.route
-                                NavigationBarItem(
-                                    selected = isSelected,
-                                    onClick = {
-                                        navController.navigate(item.route){
-                                            popUpTo(navController.graph.findStartDestination().id){
-                                                this@navigate.launchSingleTop = true
-                                            }
-                                        }
-                                    },
-                                    label = {
-                                        Text(text = item.title)
-                                    },
-                                    icon = {
-                                        if( isSelected ){
-                                            Icon(imageVector = item.selectedIcon, contentDescription=null)
-                                        } else {
-                                            Icon(imageVector = item.unSelectedIcon, contentDescription=null)
-                                        }
-                                    })
-                            }
-                        }
-                    },
-                    floatingActionButtonContent = {
-                        Icon(Icons.Filled.Add, contentDescription = "Add")
-                    },
-                    modifier = Modifier.navigationBarsPadding(),
-                    onFabClick = { isSheetOpen = true }
-                )
+                if (isBottomBarVisible) NavigationBar {
+                    listOf(NavigationItem.Home, NavigationItem.Favorite).forEach { item ->
+                        val isSelected = currentRoute == item.route
+                        NavigationBarItem(
+                            selected = isSelected,
+                            onClick = {
+                                navController.navigate(item.route){
+                                    popUpTo(navController.graph.findStartDestination().id){
+                                        this@navigate.launchSingleTop = true
+                                    }
+                                }
+                            },
+                            label = {
+                                Text(text = item.title)
+                            },
+                            icon = {
+                                Icon(
+                                    imageVector = if (isSelected) item.selectedIcon else item.unSelectedIcon,
+                                    contentDescription = null
+                                )
+                            })
+                    }
+                }
+            },
+            floatingActionButton = {
+                if (isFabVisible) FloatingActionButton(onClick = { isSheetOpen = true }) {
+                    Icon(Icons.Filled.Add, contentDescription = "Add")
+                }
             },
         ) {
 
@@ -360,48 +344,6 @@ class MainActivity : FragmentActivity() {
                     onPickBackupFile = ::openBackupPicker
                 )
             }
-        }
-    }
-}
-
-@Composable
-fun MyBottomAppBarWithFab(
-    modifier: Modifier = Modifier,
-    content: @Composable () -> Unit,
-    floatingActionButtonContent: @Composable () -> Unit,
-    onFabClick: ()-> Unit
-) {
-    Box(modifier = modifier
-        .fillMaxWidth()
-        .padding(vertical = 16.dp)
-        .background(Color.Transparent)) {
-        FloatingActionButton(
-            onClick = { onFabClick() },
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .offset(y = (-32).dp)
-                .padding(bottom = 16.dp), // Adjust padding as needed
-            shape = CircleShape,
-            elevation = FloatingActionButtonDefaults.elevation(
-                defaultElevation = 8.dp,
-                pressedElevation = 16.dp
-            ),
-            content = floatingActionButtonContent
-        )
-        Box(
-            modifier = Modifier
-                .graphicsLayer {
-                    shadowElevation = 8.dp.toPx()
-                    shape = BottomNavCustomShape(100f)
-                    clip = true
-                }
-                .align(Alignment.BottomCenter)
-                .navigationBarsPadding()
-                .offset(y = (-4.dp)) // Match FAB elevation
-                .fillMaxWidth()
-                .background(color = MaterialTheme.colorScheme.secondary) // Transparent background
-        ){
-            content()
         }
     }
 }
