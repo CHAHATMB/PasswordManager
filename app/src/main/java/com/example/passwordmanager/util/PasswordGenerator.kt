@@ -25,6 +25,8 @@ sealed class GeneratorOptionsException(message: String) : IllegalArgumentExcepti
     class NoCharacterClass : GeneratorOptionsException("Select at least one character class")
     class LengthOutOfRange(length: Int) :
         GeneratorOptionsException("Length $length is outside $MIN_GENERATED_LENGTH..$MAX_GENERATED_LENGTH")
+    class WordCountOutOfRange(wordCount: Int) :
+        GeneratorOptionsException("Word count $wordCount is outside $MIN_PASSPHRASE_WORDS..$MAX_PASSPHRASE_WORDS")
 }
 
 class PasswordGenerator(private val random: SecureRandom) {
