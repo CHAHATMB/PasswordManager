@@ -28,7 +28,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -84,7 +84,7 @@ fun CredentialScreen(
 
 @Composable
 fun CredentialItem(credential: Credential, onEvent: (CredentialEvent) -> Unit) {
-    var isPasswordRevealed by rememberSaveable(credential.id) { mutableStateOf(false) }
+    var isPasswordRevealed by remember(credential.id) { mutableStateOf(false) }
     Row(modifier= Modifier
         .fillMaxWidth()
         .clip(RoundedCornerShape(10.dp))
