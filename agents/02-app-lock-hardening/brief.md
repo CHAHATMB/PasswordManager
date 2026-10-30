@@ -1,6 +1,6 @@
 # App lock and hardening
 
-Status: PLANNED
+Status: DONE
 Backlog ID: 02
 
 ## Goal

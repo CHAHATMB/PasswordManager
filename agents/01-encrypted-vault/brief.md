@@ -1,6 +1,6 @@
 # Encrypted vault
 
-Status: PLANNED
+Status: DONE
 Backlog ID: 01
 
 ## Goal

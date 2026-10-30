@@ -59,3 +59,11 @@ Users can find, view, edit, copy and delete credentials. Copied secrets disappea
 
 ## Dependencies
 - 01 (repository, session). The clear-on-lock criterion needs 02's lock.
+
+## Carried over from 01 verification (see agents/01-encrypted-vault/verify.md)
+- [ ] Add/edit form fully visible: Save button reachable without dragging; keyboard (imePadding) does not cover fields
+- [ ] Setup screen "Create vault" button not hidden by keyboard
+- [ ] Icon buttons (favourite, sort) have contentDescription
+- [ ] From 02 review round 2: `CredentialRepository.write` must rethrow `CancellationException` before catching `IllegalStateException`
+- [ ] From 02 review round 2: `LockViewModel.turnOffBiometric` handles a failed header write (IOException) without crashing
+- [ ] From 02 verify: add sheet save button is labelled "Added" (AddCredentialScreen.kt:151) — should read "Save"
