@@ -15,7 +15,14 @@ import com.example.passwordmanager.data.vault.VaultSession
 import com.example.passwordmanager.data.vault.VaultState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import java.security.GeneralSecurityException
+import java.security.KeyStore
+import javax.crypto.Cipher
+import javax.crypto.KeyGenerator
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -23,6 +30,7 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -98,6 +106,29 @@ class LockViewModelTest {
         viewModel.unlock(password)
 
         assertNull(viewModel.state.first { !it.isWorking }.error)
+        assertTrue(viewModel.vaultState.value is VaultState.Unlocked)
+    }
+
+    @Test
+    fun keystoreFailureTurnsBiometricsOffAndKeepsPasswordWorking() = runTest {
+        // Robolectric has no AndroidKeyStore, so the real BiometricKeyStore fails the way a broken OEM Keystore does.
+        assertThrows(GeneralSecurityException::class.java) { KeyStore.getInstance("AndroidKeyStore") }
+        val setupSession = newSession()
+        setupSession.setup(password.toCharArray())
+        val jcaKey = KeyGenerator.getInstance("AES").apply { init(256) }.generateKey()
+        setupSession.enableBiometric(Cipher.getInstance("AES/GCM/NoPadding").apply { init(Cipher.ENCRYPT_MODE, jcaKey) })
+        val session = newSession()
+        val viewModel = newViewModel(session)
+
+        assertNull("no prompt may be shown", viewModel.takeBiometricUnlockCipher())
+
+        assertEquals(LockError.BiometricFailed, viewModel.state.value.error)
+        withContext(Dispatchers.Default) {
+            withTimeout(5_000) { while (session.biometricIv() != null) delay(10) }
+        }
+        assertNull("a relaunch must not try the broken key again", newViewModel(newSession()).takeBiometricUnlockCipher())
+        viewModel.unlock(password)
+        assertTrue(viewModel.state.first { !it.isWorking }.error == null)
         assertTrue(viewModel.vaultState.value is VaultState.Unlocked)
     }
 

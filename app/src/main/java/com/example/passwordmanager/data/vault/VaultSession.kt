@@ -97,8 +97,8 @@ class VaultSession(
 
     suspend fun disableBiometric() {
         withContext(Dispatchers.IO) {
-            deleteBiometricKey()
             headerStore.load()?.let { headerStore.save(it.withBiometric(null)) }
+            deleteBiometricKey()
         }
     }
 

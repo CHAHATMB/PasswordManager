@@ -5,6 +5,8 @@ import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyPermanentlyInvalidatedException
 import android.security.keystore.KeyProperties
 import android.security.keystore.StrongBoxUnavailableException
+import java.io.IOException
+import java.security.GeneralSecurityException
 import java.security.KeyStore
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
@@ -39,8 +41,13 @@ class BiometricKeyStore {
         }
     }
 
+    /** Best effort: a leftover key is useless once its blob is gone, and [newEncryptCipher] replaces it. */
     fun deleteKey() {
-        if (keyStore.containsAlias(KEY_ALIAS)) keyStore.deleteEntry(KEY_ALIAS)
+        try {
+            if (keyStore.containsAlias(KEY_ALIAS)) keyStore.deleteEntry(KEY_ALIAS)
+        } catch (e: GeneralSecurityException) {
+        } catch (e: IOException) {
+        }
     }
 
     private fun generateKey(): SecretKey {

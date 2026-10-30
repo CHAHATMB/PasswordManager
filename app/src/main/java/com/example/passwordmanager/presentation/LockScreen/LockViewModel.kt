@@ -14,6 +14,8 @@ import com.example.passwordmanager.data.vault.VaultSession
 import com.example.passwordmanager.data.vault.VaultState
 import com.example.passwordmanager.presentation.MasterPasswordError
 import com.example.passwordmanager.presentation.validateMasterPassword
+import java.security.GeneralSecurityException
+import java.security.ProviderException
 import javax.crypto.Cipher
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
@@ -24,7 +26,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-enum class LockError { PasswordTooShort, PasswordMismatch, WrongPassword, CorruptVault, BiometricInvalidated, Unexpected }
+enum class LockError { PasswordTooShort, PasswordMismatch, WrongPassword, CorruptVault, BiometricInvalidated, BiometricFailed, Unexpected }
 
 data class LockState(
     val isWorking: Boolean = false,
@@ -70,7 +72,8 @@ class LockViewModel(
 
     /**
      * Returns the DECRYPT cipher for the automatic prompt, once per lock, or null when biometric
-     * unlock is off. Turns biometric unlock off if a new enrolment invalidated the key.
+     * unlock is off. Any Keystore failure turns biometric unlock off, so a broken key can't
+     * crash every launch; the master password still works.
      */
     fun takeBiometricUnlockCipher(): Cipher? {
         if (!isBiometricPromptDue) return null
@@ -83,10 +86,18 @@ class LockViewModel(
         return try {
             biometricKeyStore.decryptCipher(iv)
         } catch (e: KeyPermanentlyInvalidatedException) {
-            _state.value = LockState(error = LockError.BiometricInvalidated)
-            viewModelScope.launch { session.disableBiometric() }
-            null
+            turnOffBiometric(LockError.BiometricInvalidated)
+        } catch (e: GeneralSecurityException) {
+            turnOffBiometric(LockError.BiometricFailed)
+        } catch (e: ProviderException) {
+            turnOffBiometric(LockError.BiometricFailed)
         }
+    }
+
+    private fun turnOffBiometric(error: LockError): Cipher? {
+        _state.update { it.copy(error = error) }
+        viewModelScope.launch { session.disableBiometric() }
+        return null
     }
 
     fun unlockWithBiometric(cipher: Cipher) = submit { session.unlockWithBiometric(cipher) }
