@@ -16,8 +16,8 @@ import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.lazy.staggeredgrid.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.StickyNote2
-import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.GridView
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.SearchOff
@@ -95,9 +95,12 @@ fun NotesScreen(
                     val searchFocus = remember { FocusRequester() }
                     LaunchedEffect(Unit) { searchFocus.requestFocus() }
                     Row(
-                        modifier = Modifier.padding(start = Spacing.l, end = Spacing.xs),
+                        modifier = Modifier.padding(start = Spacing.xs, end = Spacing.l),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
+                        IconButton(onClick = closeSearch) {
+                            Icon(imageVector = Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Close search")
+                        }
                         SearchField(
                             text = searchText,
                             onTextChange = { onEvent(NotesEvent.OnSearchTextChange(it)) },
@@ -106,9 +109,6 @@ fun NotesScreen(
                                 .weight(1f)
                                 .focusRequester(searchFocus)
                         )
-                        IconButton(onClick = closeSearch) {
-                            Icon(imageVector = Icons.Rounded.Close, contentDescription = "Close search")
-                        }
                     }
                 }
             }
