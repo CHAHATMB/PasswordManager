@@ -4,6 +4,8 @@ import android.app.ActivityManager
 import android.content.Context
 import com.example.passwordmanager.data.CredentialDatabase
 import com.example.passwordmanager.data.CredentialRepository
+import com.example.passwordmanager.data.backup.BackupCrypto
+import com.example.passwordmanager.data.backup.BackupRepository
 import com.example.passwordmanager.data.crypto.Argon2KeyDerivation
 import com.example.passwordmanager.data.crypto.BiometricKeyStore
 import com.example.passwordmanager.data.crypto.KdfParams
@@ -28,16 +30,20 @@ class AppContainer(context: Context) {
 
     val biometricKeyStore = BiometricKeyStore()
 
+    private val keyDerivation = Argon2KeyDerivation()
+
+    private val kdfParams = if (appContext.getSystemService(ActivityManager::class.java).isLowRamDevice) {
+        KdfParams.LOW_RAM
+    } else {
+        KdfParams.DEFAULT
+    }
+
     val vaultSession = VaultSession(
         headerStore = VaultHeaderStore(
             appContext.getSharedPreferences(VaultHeaderStore.PREFS_NAME, Context.MODE_PRIVATE)
         ),
-        crypto = VaultCrypto(Argon2KeyDerivation()),
-        kdfParams = if (appContext.getSystemService(ActivityManager::class.java).isLowRamDevice) {
-            KdfParams.LOW_RAM
-        } else {
-            KdfParams.DEFAULT
-        },
+        crypto = VaultCrypto(keyDerivation),
+        kdfParams = kdfParams,
         openDatabase = { databaseKey -> CredentialDatabase.openEncrypted(appContext, databaseKey) },
         deleteDatabases = {
             appContext.deleteDatabase(CredentialDatabase.LEGACY_DB_NAME)
@@ -47,6 +53,13 @@ class AppContainer(context: Context) {
     )
 
     val credentialRepository = CredentialRepository(vaultSession)
+
+    val backupRepository = BackupRepository(
+        contentResolver = appContext.contentResolver,
+        credentials = credentialRepository,
+        crypto = BackupCrypto(keyDerivation),
+        kdfParams = kdfParams
+    )
 
     val settingsStore = SettingsStore(
         appContext.getSharedPreferences(SettingsStore.PREFS_NAME, Context.MODE_PRIVATE)
