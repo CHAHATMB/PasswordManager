@@ -42,6 +42,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.example.passwordmanager.ui.theme.Spacing
@@ -112,6 +113,7 @@ fun OnboardingScreen(onFinish: () -> Unit) {
             modifier = Modifier
                 .align(Alignment.End)
                 .alpha(if (isLastPage) 0f else 1f)
+                .then(if (isLastPage) Modifier.clearAndSetSemantics {} else Modifier)
         ) {
             Text(text = "Skip")
         }
