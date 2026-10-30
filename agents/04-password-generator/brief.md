@@ -1,6 +1,6 @@
 # Password generator
 
-Status: PLANNED
+Status: DONE
 Backlog ID: 04
 
 ## Goal

@@ -82,3 +82,7 @@ Users can save a password-protected encrypted backup file and restore it on a fr
 
 ## Dependencies
 - 01 (crypto, `KeyDerivation`, repository). 02 (Settings screen).
+
+## Carried over from 04 review/verify
+- [ ] Home bottom bar must not sit above the keyboard while searching (same treatment as Edit screen)
+- [ ] Failed Setup should keep the entered fields (only clear on success) — minor
