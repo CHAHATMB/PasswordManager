@@ -7,10 +7,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
@@ -35,14 +33,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.example.passwordmanager.data.Credential
 import com.example.passwordmanager.presentation.CredentialEvent
 import com.example.passwordmanager.presentation.HomeScreen.PASSWORD_MASK
+import com.example.passwordmanager.presentation.components.AppTopBar
 import com.example.passwordmanager.presentation.components.showCopiedMessage
+import com.example.passwordmanager.ui.theme.Spacing
 
 @Composable
 fun CredentialDetailScreen(
@@ -56,46 +52,37 @@ fun CredentialDetailScreen(
     val context = LocalContext.current
     Scaffold(
         topBar = {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(55.dp)
-                    .background(MaterialTheme.colorScheme.onPrimary),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                IconButton(onClick = onBack) {
-                    Icon(imageVector = Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back")
+            AppTopBar(
+                title = credential.website,
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(imageVector = Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                actions = {
+                    IconButton(onClick = { onEvent(CredentialEvent.FavoriteCredential(credential)) }) {
+                        Icon(
+                            imageVector = if (credential.isFav) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
+                            contentDescription = if (credential.isFav) "Remove from favourites" else "Add to favourites"
+                        )
+                    }
+                    IconButton(onClick = onEdit) {
+                        Icon(imageVector = Icons.Rounded.Edit, contentDescription = "Edit")
+                    }
+                    IconButton(onClick = onDelete) {
+                        Icon(imageVector = Icons.Rounded.Delete, contentDescription = "Delete")
+                    }
                 }
-                Text(
-                    text = credential.website,
-                    modifier = Modifier.weight(1f),
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.primary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                IconButton(onClick = { onEvent(CredentialEvent.FavoriteCredential(credential)) }) {
-                    Icon(
-                        imageVector = if (credential.isFav) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
-                        contentDescription = if (credential.isFav) "Remove from favourites" else "Add to favourites"
-                    )
-                }
-                IconButton(onClick = onEdit) {
-                    Icon(imageVector = Icons.Rounded.Edit, contentDescription = "Edit")
-                }
-                IconButton(onClick = onDelete) {
-                    Icon(imageVector = Icons.Rounded.Delete, contentDescription = "Delete")
-                }
-            }
+            )
         }
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(it)
-                .padding(16.dp)
+                .padding(Spacing.l)
                 .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(Spacing.m)
         ) {
             DetailField(label = "Website", value = credential.website)
             DetailField(label = "Username", value = credential.username) {
@@ -132,19 +119,14 @@ private fun DetailField(label: String, value: String, actions: @Composable RowSc
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(10.dp))
-            .background(MaterialTheme.colorScheme.secondaryContainer)
-            .padding(12.dp),
+            .clip(MaterialTheme.shapes.medium)
+            .background(MaterialTheme.colorScheme.surfaceContainerLow)
+            .padding(start = Spacing.l, top = Spacing.m, bottom = Spacing.m, end = Spacing.xs),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(text = label, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSecondaryContainer)
-            Text(
-                text = value,
-                fontSize = 18.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSecondaryContainer
-            )
+            Text(text = label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(text = value, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
         }
         actions()
     }
