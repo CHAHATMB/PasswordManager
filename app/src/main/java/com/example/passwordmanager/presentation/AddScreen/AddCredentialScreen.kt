@@ -91,58 +91,63 @@ private fun TextFields(
             .fillMaxSize()
             .padding(it)
             .imePadding()
-            .verticalScroll(rememberScrollState())
     ) {
-
-        OutlinedTextField(
-            value = website,
-            onValueChange = {
-                website = it
-            },
+        // Only the fields scroll, so Save stays visible above the keyboard.
+        Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            shape = RoundedCornerShape(corner = CornerSize(8.dp)),
+                .weight(1f)
+                .verticalScroll(rememberScrollState())
+        ) {
+            OutlinedTextField(
+                value = website,
+                onValueChange = {
+                    website = it
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                shape = RoundedCornerShape(corner = CornerSize(8.dp)),
 
-            placeholder = {
-                Text(text = "Website")
-            },
-            textStyle = TextStyle(fontWeight = FontWeight.SemiBold, fontSize = 18.sp),
-        )
-        OutlinedTextField(
-            value = username, onValueChange = {
-                username = it
-            },
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            placeholder = {
-                Text(text = "Username")
-            },
-            textStyle = TextStyle(fontWeight = FontWeight.SemiBold, fontSize = 18.sp)
-        )
-        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            PasswordTextField(
-                value = password,
-                onValueChange = { password = it },
-                placeholder = "Password",
-                modifier = Modifier.fillMaxWidth(),
-                onGenerate = { isGeneratorOpen = true }
+                placeholder = {
+                    Text(text = "Website")
+                },
+                textStyle = TextStyle(fontWeight = FontWeight.SemiBold, fontSize = 18.sp),
             )
-            if (password.isNotEmpty()) PasswordStrengthIndicator(password = password)
+            OutlinedTextField(
+                value = username, onValueChange = {
+                    username = it
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                placeholder = {
+                    Text(text = "Username")
+                },
+                textStyle = TextStyle(fontWeight = FontWeight.SemiBold, fontSize = 18.sp)
+            )
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                PasswordTextField(
+                    value = password,
+                    onValueChange = { password = it },
+                    placeholder = "Password",
+                    modifier = Modifier.fillMaxWidth(),
+                    onGenerate = { isGeneratorOpen = true }
+                )
+                if (password.isNotEmpty()) PasswordStrengthIndicator(password = password)
+            }
+            OutlinedTextField(
+                value = note, onValueChange = {
+                    note = it
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                placeholder = {
+                    Text(text = "Note")
+                },
+                textStyle = TextStyle(fontWeight = FontWeight.SemiBold, fontSize = 18.sp)
+            )
         }
-        OutlinedTextField(
-            value = note, onValueChange = {
-                note = it
-            },
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            placeholder = {
-                Text(text = "Note")
-            },
-            textStyle = TextStyle(fontWeight = FontWeight.SemiBold, fontSize = 18.sp)
-        )
 
         Row(
             modifier = Modifier.padding(16.dp),

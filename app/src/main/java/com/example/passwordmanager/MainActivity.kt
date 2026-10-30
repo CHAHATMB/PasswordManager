@@ -167,7 +167,8 @@ class MainActivity : FragmentActivity() {
             .background(MaterialTheme.colorScheme.background),
             snackbarHost = { SnackbarHost(snackbarHostState) },
             bottomBar = {
-                MyBottomAppBarWithFab(
+                // Hidden on Edit: with adjustResize the bar and FAB would ride above the keyboard.
+                if (currentRoute != CredentialRoutes.EDIT) MyBottomAppBarWithFab(
                     content = {
                         NavigationBar {
                             listOf(NavigationItem.Home, NavigationItem.Favorite).forEach { item ->
