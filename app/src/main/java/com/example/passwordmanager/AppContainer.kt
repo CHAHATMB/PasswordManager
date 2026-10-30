@@ -43,7 +43,9 @@ class AppContainer(context: Context) {
         appContext.getSharedPreferences(SettingsStore.PREFS_NAME, Context.MODE_PRIVATE)
     )
 
-    val unlockThrottle = UnlockThrottle()
+    val unlockThrottle = UnlockThrottle(
+        appContext.getSharedPreferences(UnlockThrottle.PREFS_NAME, Context.MODE_PRIVATE)
+    )
 
     val autoLockObserver = AutoLockObserver(vaultSession, settingsStore)
 }

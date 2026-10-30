@@ -24,11 +24,13 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
@@ -46,6 +48,7 @@ class LockViewModelTest {
         context.getSharedPreferences(VaultHeaderStore.PREFS_NAME, Context.MODE_PRIVATE)
     )
     private val openedDatabases = mutableListOf<CredentialDatabase>()
+    private val throttlePrefs = context.getSharedPreferences(UnlockThrottle.PREFS_NAME, Context.MODE_PRIVATE)
     private val password = "correct horse battery staple"
 
     @Before
@@ -110,6 +113,33 @@ class LockViewModelTest {
     }
 
     @Test
+    fun unlockIsIgnoredWhileBlockedAndCountsSurviveANewViewModel() = runTest {
+        newSession().setup(password.toCharArray())
+        // Tied to the test scheduler so the countdown's delays move the clock and the loop ends.
+        val throttle = UnlockThrottle(throttlePrefs, now = { testScheduler.currentTime })
+        val viewModel = newViewModel(newSession(), throttle)
+        repeat(3) {
+            viewModel.unlock("wrong password!!")
+            viewModel.state.first { !it.isWorking }
+        }
+        assertEquals("3rd failure blocks for 5 s", 5, viewModel.state.value.retryInSeconds)
+
+        viewModel.unlock(password)
+
+        assertFalse("blocked unlock must not start", viewModel.state.value.isWorking)
+        assertEquals(VaultState.Locked, viewModel.vaultState.value)
+        val relaunched = newViewModel(newSession(), UnlockThrottle(throttlePrefs, now = { testScheduler.currentTime }))
+        assertEquals("a new ViewModel (cold start) keeps the block", 5, relaunched.state.value.retryInSeconds)
+
+        advanceTimeBy(5_001)
+        viewModel.unlock(password)
+
+        assertNull(viewModel.state.first { !it.isWorking }.error)
+        assertTrue(viewModel.vaultState.value is VaultState.Unlocked)
+        assertEquals("success resets the count", 0L, throttle.remainingMillis())
+    }
+
+    @Test
     fun keystoreFailureTurnsBiometricsOffAndKeepsPasswordWorking() = runTest {
         // Robolectric has no AndroidKeyStore, so the real BiometricKeyStore fails the way a broken OEM Keystore does.
         assertThrows(GeneralSecurityException::class.java) { KeyStore.getInstance("AndroidKeyStore") }
@@ -132,8 +162,10 @@ class LockViewModelTest {
         assertTrue(viewModel.vaultState.value is VaultState.Unlocked)
     }
 
-    private fun newViewModel(session: VaultSession) =
-        LockViewModel(session, UnlockThrottle(), BiometricKeyStore())
+    private fun newViewModel(
+        session: VaultSession,
+        throttle: UnlockThrottle = UnlockThrottle(throttlePrefs)
+    ) = LockViewModel(session, throttle, BiometricKeyStore())
 
     private fun newSession(
         openDatabase: (ByteArray) -> CredentialDatabase = {

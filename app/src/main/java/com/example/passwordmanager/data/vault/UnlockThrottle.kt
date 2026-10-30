@@ -1,6 +1,6 @@
 package com.example.passwordmanager.data.vault
 
-import android.os.SystemClock
+import android.content.SharedPreferences
 
 private const val FREE_ATTEMPTS = 2
 private const val BASE_DELAY_MILLIS = 5_000L
@@ -14,21 +14,35 @@ fun unlockDelayMillis(failedAttempts: Int): Long {
     return (BASE_DELAY_MILLIS shl doublings).coerceAtMost(MAX_DELAY_MILLIS)
 }
 
-/** In memory only (process-wide, so finishing the activity does not reset it). */
-class UnlockThrottle {
+/** Persisted, so force-stopping the app doesn't reset the delay. */
+class UnlockThrottle(
+    private val prefs: SharedPreferences,
+    private val now: () -> Long = System::currentTimeMillis
+) {
 
-    private var failedAttempts = 0
-    private var blockedUntil = 0L
-
-    fun remainingMillis(): Long = (blockedUntil - SystemClock.elapsedRealtime()).coerceAtLeast(0)
+    fun remainingMillis(): Long {
+        val delay = unlockDelayMillis(prefs.getInt(KEY_FAILED_ATTEMPTS, 0))
+        val sinceLastFailure = now() - prefs.getLong(KEY_LAST_FAILURE_AT, 0)
+        // Wall-clock time, because it must survive process death. A clock set backwards makes
+        // sinceLastFailure negative; the clamp then restarts the delay from now instead of extending it.
+        return (delay - sinceLastFailure).coerceIn(0, delay)
+    }
 
     fun onFailure() {
-        failedAttempts++
-        blockedUntil = SystemClock.elapsedRealtime() + unlockDelayMillis(failedAttempts)
+        // commit, not apply: a kill right after a wrong password must not lose the count.
+        prefs.edit()
+            .putInt(KEY_FAILED_ATTEMPTS, prefs.getInt(KEY_FAILED_ATTEMPTS, 0) + 1)
+            .putLong(KEY_LAST_FAILURE_AT, now())
+            .commit()
     }
 
     fun onSuccess() {
-        failedAttempts = 0
-        blockedUntil = 0
+        prefs.edit().remove(KEY_FAILED_ATTEMPTS).remove(KEY_LAST_FAILURE_AT).commit()
+    }
+
+    companion object {
+        const val PREFS_NAME = "unlock_throttle"
+        private const val KEY_FAILED_ATTEMPTS = "failed_attempts"
+        private const val KEY_LAST_FAILURE_AT = "last_failure_at"
     }
 }

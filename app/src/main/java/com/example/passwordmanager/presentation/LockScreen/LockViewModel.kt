@@ -124,7 +124,7 @@ class LockViewModel(
                 _state.value = LockState()
             } catch (e: VaultException.WrongPassword) {
                 throttle.onFailure()
-                _state.value = LockState(error = LockError.WrongPassword)
+                _state.value = LockState(error = LockError.WrongPassword, retryInSeconds = secondsUntilRetry())
                 startCountdown()
             } catch (e: VaultException.CorruptHeader) {
                 _state.value = LockState(error = LockError.CorruptVault)
@@ -142,7 +142,7 @@ class LockViewModel(
         countdown = viewModelScope.launch {
             while (true) {
                 val remaining = throttle.remainingMillis()
-                val seconds = ((remaining + 999) / 1000).toInt()
+                val seconds = secondsUntilRetry(remaining)
                 _state.update { it.copy(retryInSeconds = seconds) }
                 if (seconds == 0) break
                 // Wake up when the displayed whole-second value changes.
@@ -150,6 +150,9 @@ class LockViewModel(
             }
         }
     }
+
+    private fun secondsUntilRetry(remaining: Long = throttle.remainingMillis()): Int =
+        ((remaining + 999) / 1000).toInt()
 
     companion object {
         val Factory = viewModelFactory {
