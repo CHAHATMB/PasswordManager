@@ -27,6 +27,15 @@ enum class ThemeMode {
     }
 }
 
+enum class NotesLayout {
+    GRID,
+    LIST;
+
+    companion object {
+        val DEFAULT = GRID
+    }
+}
+
 class SettingsStore(private val prefs: SharedPreferences) {
 
     var autoLockTimeout: AutoLockTimeout
@@ -51,9 +60,22 @@ class SettingsStore(private val prefs: SharedPreferences) {
         _themeMode.value = mode
     }
 
+    private val _notesLayout = MutableStateFlow(
+        prefs.getString(KEY_NOTES_LAYOUT, null).let { name ->
+            NotesLayout.entries.firstOrNull { it.name == name } ?: NotesLayout.DEFAULT
+        }
+    )
+    val notesLayout: StateFlow<NotesLayout> = _notesLayout.asStateFlow()
+
+    fun setNotesLayout(layout: NotesLayout) {
+        prefs.edit().putString(KEY_NOTES_LAYOUT, layout.name).apply()
+        _notesLayout.value = layout
+    }
+
     companion object {
         const val PREFS_NAME = "settings"
         private const val KEY_AUTO_LOCK_TIMEOUT = "auto_lock_timeout"
         private const val KEY_THEME_MODE = "theme_mode"
+        private const val KEY_NOTES_LAYOUT = "notes_layout"
     }
 }
