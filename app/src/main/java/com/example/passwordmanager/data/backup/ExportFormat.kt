@@ -1,6 +1,7 @@
 package com.example.passwordmanager.data.backup
 
 import com.example.passwordmanager.data.Credential
+import com.example.passwordmanager.data.notes.Note
 import com.example.passwordmanager.data.totp.TotpAccount
 import com.example.passwordmanager.data.totp.toTotpAccount
 import com.example.passwordmanager.util.totp.OtpAuthAccount
@@ -78,7 +79,8 @@ data class BackupTotp(
 @Serializable
 data class BackupContent(
     val credentials: List<BackupItem>,
-    val totp: List<BackupTotp> = emptyList()
+    val totp: List<BackupTotp> = emptyList(),
+    val notes: List<BackupNote> = emptyList()
 )
 
 fun TotpAccount.toBackupTotp() = BackupTotp(issuer, accountName, secret, algorithm.name, digits, period, createdAt)
@@ -89,3 +91,17 @@ fun BackupTotp.toTotpAccountOrNull(): TotpAccount? {
     val result = OtpAuthAccount.create(issuer, accountName, secret, algorithm, digits, period)
     return (result as? OtpAuthResult.Totp)?.account?.toTotpAccount(created)
 }
+
+@Serializable
+data class BackupNote(
+    val title: String,
+    val body: String,
+    val created: Long,
+    val updated: Long
+) {
+    override fun toString() = "BackupNote(created=$created, updated=$updated)"
+}
+
+fun Note.toBackupNote() = BackupNote(title, body, createdAt, updatedAt)
+
+fun BackupNote.toNote() = Note(title = title, body = body, createdAt = created, updatedAt = updated)

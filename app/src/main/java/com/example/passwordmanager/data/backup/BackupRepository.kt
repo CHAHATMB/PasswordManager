@@ -5,6 +5,7 @@ import android.net.Uri
 import android.provider.DocumentsContract
 import com.example.passwordmanager.data.CredentialRepository
 import com.example.passwordmanager.data.crypto.KdfParams
+import com.example.passwordmanager.data.notes.NoteRepository
 import com.example.passwordmanager.data.totp.TotpRepository
 import java.io.FileNotFoundException
 import java.io.IOException
@@ -17,7 +18,9 @@ class ImportResult(
     val invalid: Int,
     val totpImported: Int = 0,
     val totpDuplicates: Int = 0,
-    val totpInvalid: Int = 0
+    val totpInvalid: Int = 0,
+    val notesImported: Int = 0,
+    val notesDuplicates: Int = 0
 )
 
 /** Reads and writes backup and CSV files picked through the Storage Access Framework. */
@@ -25,19 +28,21 @@ class BackupRepository(
     private val contentResolver: ContentResolver,
     private val credentials: CredentialRepository,
     private val totp: TotpRepository,
+    private val notes: NoteRepository,
     private val crypto: BackupCrypto,
     private val kdfParams: KdfParams,
     private val clock: () -> Long = System::currentTimeMillis
 ) {
 
     /**
-     * Encrypts every credential and authenticator account. The result holds no plaintext, so it can
+     * Encrypts every credential, authenticator account and note. The result holds no plaintext, so it can
      * wait while the user picks a file.
      */
     suspend fun createBackup(password: CharArray): ByteArray {
         val content = BackupContent(
             credentials = credentials.getAll().map { it.toBackupItem() },
-            totp = totp.getAll().map { it.toBackupTotp() }
+            totp = totp.getAll().map { it.toBackupTotp() },
+            notes = notes.getAll().map { it.toBackupNote() }
         )
         return withContext(Dispatchers.Default) { crypto.encrypt(content, password, kdfParams) }
     }
@@ -66,13 +71,16 @@ class BackupRepository(
         val accounts = content.totp.mapNotNull { it.toTotpAccountOrNull() }
         val credentialResult = insert(content.credentials.map { it.toCredential() }.toParsedImport())
         val totpImported = totp.insertSkippingDuplicates(accounts)
+        val notesImported = notes.insertSkippingDuplicates(content.notes.map { it.toNote() })
         return ImportResult(
             imported = credentialResult.imported,
             duplicates = credentialResult.duplicates,
             invalid = credentialResult.invalid,
             totpImported = totpImported,
             totpDuplicates = accounts.size - totpImported,
-            totpInvalid = content.totp.size - accounts.size
+            totpInvalid = content.totp.size - accounts.size,
+            notesImported = notesImported,
+            notesDuplicates = content.notes.size - notesImported
         )
     }
 

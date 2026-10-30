@@ -65,6 +65,7 @@ class AppContainer(context: Context) {
         contentResolver = appContext.contentResolver,
         credentials = credentialRepository,
         totp = totpRepository,
+        notes = noteRepository,
         crypto = BackupCrypto(keyDerivation),
         kdfParams = kdfParams
     )

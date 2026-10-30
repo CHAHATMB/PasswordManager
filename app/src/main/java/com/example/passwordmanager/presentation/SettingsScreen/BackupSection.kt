@@ -43,7 +43,7 @@ fun BackupSection(dialog: BackupDialog?, onEvent: (BackupEvent) -> Unit, onPick:
         null -> Unit
         is BackupDialog.MasterPassword -> PasswordDialog(
             title = "Export encrypted backup",
-            message = "The backup holds your passwords and authenticator accounts. Enter your master password to continue.",
+            message = "The backup holds your passwords, authenticator accounts and notes. Enter your master password to continue.",
             error = dialog.error?.message(),
             confirmLabel = "Continue",
             withConfirmation = false,
@@ -108,12 +108,13 @@ fun BackupSection(dialog: BackupDialog?, onEvent: (BackupEvent) -> Unit, onPick:
             title = "Import finished",
             message = with(dialog.result) {
                 val passwords = "Imported: $imported\nSkipped as duplicate: $duplicates\nInvalid (no website or password): $invalid"
-                if (totpImported + totpDuplicates + totpInvalid == 0) {
-                    passwords
-                } else {
-                    "Passwords\n$passwords\n\nAuthenticator accounts\nImported: $totpImported\n" +
-                        "Skipped as duplicate: $totpDuplicates\nInvalid: $totpInvalid"
-                }
+                val sections = listOfNotNull(
+                    if (totpImported + totpDuplicates + totpInvalid == 0) null else
+                        "Authenticator accounts\nImported: $totpImported\nSkipped as duplicate: $totpDuplicates\nInvalid: $totpInvalid",
+                    if (notesImported + notesDuplicates == 0) null else
+                        "Notes\nImported: $notesImported\nSkipped as duplicate: $notesDuplicates"
+                )
+                if (sections.isEmpty()) passwords else (listOf("Passwords\n$passwords") + sections).joinToString("\n\n")
             },
             onDismiss = dismiss
         )
