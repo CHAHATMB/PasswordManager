@@ -1,6 +1,6 @@
 # Encrypted notes
 
-Status: PLANNED
+Status: IN_REVIEW
 Backlog ID: 11
 
 ## Goal
