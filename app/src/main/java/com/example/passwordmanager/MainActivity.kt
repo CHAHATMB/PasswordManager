@@ -32,8 +32,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.window.SecureFlagPolicy
@@ -69,6 +72,7 @@ import com.example.passwordmanager.presentation.LockScreen.SetupScreen
 import com.example.passwordmanager.presentation.LockScreen.UnlockScreen
 import com.example.passwordmanager.presentation.NavigationItem
 import com.example.passwordmanager.presentation.NoteRoutes
+import com.example.passwordmanager.presentation.Onboarding.OnboardingScreen
 import com.example.passwordmanager.presentation.Notes.NoteEditorScreen
 import com.example.passwordmanager.presentation.Notes.NotesEvent
 import com.example.passwordmanager.presentation.Notes.NotesScreen
@@ -160,9 +164,17 @@ class MainActivity : FragmentActivity() {
                 // navigation back stack and sheet state of the previous branch.
                 when (vaultState) {
                     VaultState.NotSetUp -> {
-                        val context = LocalContext.current
-                        val isBiometricAvailable = remember { BiometricPromptUtils.canAuthenticate(context) }
-                        SetupScreen(state = lockState, isBiometricAvailable = isBiometricAvailable, onSetup = lockViewModel::setup)
+                        var showOnboarding by rememberSaveable { mutableStateOf(!settingsStore.isOnboardingDone) }
+                        if (showOnboarding) {
+                            OnboardingScreen(onFinish = {
+                                settingsStore.isOnboardingDone = true
+                                showOnboarding = false
+                            })
+                        } else {
+                            val context = LocalContext.current
+                            val isBiometricAvailable = remember { BiometricPromptUtils.canAuthenticate(context) }
+                            SetupScreen(state = lockState, isBiometricAvailable = isBiometricAvailable, onSetup = lockViewModel::setup)
+                        }
                     }
                     VaultState.Locked -> {
                         LaunchedEffect(Unit) {
