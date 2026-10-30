@@ -1,9 +1,11 @@
 package com.example.passwordmanager.presentation.components
 
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.shape.CornerSize
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Autorenew
 import androidx.compose.material.icons.rounded.Visibility
 import androidx.compose.material.icons.rounded.VisibilityOff
 import androidx.compose.material3.Icon
@@ -30,7 +32,8 @@ fun PasswordTextField(
     onValueChange: (String) -> Unit,
     placeholder: String,
     modifier: Modifier = Modifier,
-    enabled: Boolean = true
+    enabled: Boolean = true,
+    onGenerate: (() -> Unit)? = null
 ) {
     var isRevealed by remember { mutableStateOf(false) }
     OutlinedTextField(
@@ -45,11 +48,18 @@ fun PasswordTextField(
         visualTransformation = if (isRevealed) VisualTransformation.None else PasswordVisualTransformation(),
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, autoCorrect = false),
         trailingIcon = {
-            IconButton(onClick = { isRevealed = !isRevealed }) {
-                Icon(
-                    imageVector = if (isRevealed) Icons.Rounded.VisibilityOff else Icons.Rounded.Visibility,
-                    contentDescription = if (isRevealed) "Hide password" else "Show password"
-                )
+            Row {
+                if (onGenerate != null) {
+                    IconButton(onClick = onGenerate, enabled = enabled) {
+                        Icon(imageVector = Icons.Rounded.Autorenew, contentDescription = "Generate password")
+                    }
+                }
+                IconButton(onClick = { isRevealed = !isRevealed }) {
+                    Icon(
+                        imageVector = if (isRevealed) Icons.Rounded.VisibilityOff else Icons.Rounded.Visibility,
+                        contentDescription = if (isRevealed) "Hide password" else "Show password"
+                    )
+                }
             }
         }
     )

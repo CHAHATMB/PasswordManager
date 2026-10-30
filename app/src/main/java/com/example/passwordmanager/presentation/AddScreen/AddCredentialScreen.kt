@@ -34,6 +34,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.passwordmanager.data.Credential
 import com.example.passwordmanager.presentation.CredentialEvent
+import com.example.passwordmanager.presentation.components.GeneratorSheet
 import com.example.passwordmanager.presentation.components.PasswordStrengthIndicator
 import com.example.passwordmanager.presentation.components.PasswordTextField
 import com.example.passwordmanager.presentation.isCredentialFormValid
@@ -79,6 +80,11 @@ private fun TextFields(
     var username by remember { mutableStateOf(editing?.username.orEmpty()) }
     var password by remember { mutableStateOf(editing?.password.orEmpty()) }
     var note by remember { mutableStateOf(editing?.note.orEmpty()) }
+    var isGeneratorOpen by remember { mutableStateOf(false) }
+
+    if (isGeneratorOpen) {
+        GeneratorSheet(onUse = { password = it }, onDismiss = { isGeneratorOpen = false })
+    }
 
     Column(
         modifier = Modifier
@@ -120,7 +126,8 @@ private fun TextFields(
                 value = password,
                 onValueChange = { password = it },
                 placeholder = "Password",
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                onGenerate = { isGeneratorOpen = true }
             )
             if (password.isNotEmpty()) PasswordStrengthIndicator(password = password)
         }
