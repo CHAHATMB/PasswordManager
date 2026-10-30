@@ -180,7 +180,7 @@ internal val WEBSITE_CATALOG_ENTRIES = listOf(
     Website("IDBI Bank", "idbi.bank.in", listOf("idbi")),
     Website("IDFC First Bank", "idfcfirst.bank.in", listOf("idfc")),
     Website("IndusInd Bank", "indusind.bank.in", listOf("indusind")),
-    Website("Yes Bank", "yesbank.in"),
+    Website("Yes Bank", "yes.bank.in"),
     Website("Federal Bank", "federal.bank.in"),
     Website("South Indian Bank", "southindianbank.bank.in"),
     Website("Karnataka Bank", "karnatakabank.bank.in"),
