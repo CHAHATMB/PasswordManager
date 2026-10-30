@@ -5,6 +5,7 @@ import android.database.sqlite.SQLiteException
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import com.example.passwordmanager.data.CredentialDatabase
+import com.example.passwordmanager.data.crypto.BiometricKeyStore
 import com.example.passwordmanager.data.crypto.Pbkdf2KeyDerivation
 import com.example.passwordmanager.data.crypto.TEST_KDF_PARAMS
 import com.example.passwordmanager.data.crypto.VaultCrypto
@@ -101,7 +102,7 @@ class LockViewModelTest {
     }
 
     private fun newViewModel(session: VaultSession) =
-        LockViewModel(session, UnlockThrottle())
+        LockViewModel(session, UnlockThrottle(), BiometricKeyStore())
 
     private fun newSession(
         openDatabase: (ByteArray) -> CredentialDatabase = {

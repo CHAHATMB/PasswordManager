@@ -3,6 +3,7 @@ package com.example.passwordmanager
 import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
+import androidx.biometric.BiometricPrompt
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -25,6 +26,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -36,8 +38,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.fragment.app.FragmentActivity
+import androidx.lifecycle.withResumed
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -53,17 +57,28 @@ import com.example.passwordmanager.presentation.LockScreen.LockViewModel
 import com.example.passwordmanager.presentation.LockScreen.SetupScreen
 import com.example.passwordmanager.presentation.LockScreen.UnlockScreen
 import com.example.passwordmanager.presentation.NavigationItem
+import com.example.passwordmanager.presentation.SettingsScreen.SettingsScreen
+import com.example.passwordmanager.presentation.SettingsScreen.SettingsViewModel
 import com.example.passwordmanager.ui.theme.PasswordManagerTheme
 import com.example.passwordmanager.ui.theme.shapes.BottomNavCustomShape
+import com.example.passwordmanager.util.BiometricPromptUtils
+import javax.crypto.Cipher
 import kotlinx.coroutines.launch
 
 class MainActivity : FragmentActivity() {
 
     private val lockViewModel by viewModels<LockViewModel> { LockViewModel.Factory }
     private val viewModel by viewModels<CredentialViewModel> { CredentialViewModel.Factory }
+    private val settingsViewModel by viewModels<SettingsViewModel> { SettingsViewModel.Factory }
+
+    private lateinit var biometricPrompt: BiometricPrompt
+    // Not saved across recreation: after a rotation mid-prompt the result is simply ignored.
+    private var isEnablingBiometric = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Created in onCreate so the prompt reconnects to this callback after a configuration change.
+        biometricPrompt = BiometricPromptUtils.createBiometricPrompt(this, ::onBiometricAuthenticated)
         setContent {
             PasswordManagerTheme {
                 val vaultState by lockViewModel.vaultState.collectAsState()
@@ -72,10 +87,36 @@ class MainActivity : FragmentActivity() {
                 // navigation back stack and sheet state of the previous branch.
                 when (vaultState) {
                     VaultState.NotSetUp -> SetupScreen(state = lockState, onSetup = lockViewModel::setup)
-                    VaultState.Locked -> UnlockScreen(state = lockState, onUnlock = lockViewModel::unlock)
+                    VaultState.Locked -> {
+                        LaunchedEffect(Unit) {
+                            // Waits for RESUMED: after a screen-off lock the prompt appears once the user is back.
+                            lifecycle.withResumed { lockViewModel.takeBiometricUnlockCipher()?.let(::showUnlockPrompt) }
+                        }
+                        UnlockScreen(state = lockState, onUnlock = lockViewModel::unlock)
+                    }
                     is VaultState.Unlocked -> VaultShell()
                 }
             }
+        }
+    }
+
+    private fun showUnlockPrompt(cipher: Cipher) {
+        isEnablingBiometric = false
+        biometricPrompt.authenticate(BiometricPromptUtils.unlockPromptInfo(), BiometricPrompt.CryptoObject(cipher))
+    }
+
+    private fun showEnablePrompt() {
+        val cipher = settingsViewModel.newBiometricCipher() ?: return
+        isEnablingBiometric = true
+        biometricPrompt.authenticate(BiometricPromptUtils.enablePromptInfo(), BiometricPrompt.CryptoObject(cipher))
+    }
+
+    private fun onBiometricAuthenticated(cipher: Cipher) {
+        val vaultState = lockViewModel.vaultState.value
+        if (isEnablingBiometric && vaultState is VaultState.Unlocked) {
+            settingsViewModel.enableBiometric(cipher)
+        } else if (!isEnablingBiometric && vaultState == VaultState.Locked) {
+            lockViewModel.unlockWithBiometric(cipher)
         }
     }
 
@@ -183,6 +224,20 @@ class MainActivity : FragmentActivity() {
                     state = state,
                     navController = navController,
                     onEvent = viewModel::onEvent
+                )
+            }
+            composable(NavigationItem.Settings.route) {
+                LaunchedEffect(Unit) { settingsViewModel.refresh() }
+                val settingsState by settingsViewModel.state.collectAsState()
+                val context = LocalContext.current
+                val isBiometricAvailable = remember { BiometricPromptUtils.canAuthenticate(context) }
+                SettingsScreen(
+                    state = settingsState,
+                    isBiometricAvailable = isBiometricAvailable,
+                    onAutoLockTimeoutChange = settingsViewModel::setAutoLockTimeout,
+                    onBiometricToggle = { enabled ->
+                        if (enabled) showEnablePrompt() else settingsViewModel.disableBiometric()
+                    }
                 )
             }
         }

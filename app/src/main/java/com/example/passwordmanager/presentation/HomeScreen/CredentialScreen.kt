@@ -17,6 +17,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FavoriteBorder
+import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Sort
 import androidx.compose.material.icons.rounded.Visibility
 import androidx.compose.material.icons.rounded.VisibilityOff
@@ -40,6 +41,7 @@ import androidx.navigation.NavController
 import com.example.passwordmanager.data.Credential
 import com.example.passwordmanager.presentation.CredentialEvent
 import com.example.passwordmanager.presentation.CredentialState
+import com.example.passwordmanager.presentation.NavigationItem
 
 private const val PASSWORD_MASK = "••••••••"
 
@@ -65,6 +67,9 @@ fun CredentialScreen(
                 )
                 IconButton(onClick = { onEvent(CredentialEvent.SortCredentail) }) {
                     Icon(imageVector = Icons.Rounded.Sort, contentDescription = null, modifier = Modifier.size(35.dp), tint = MaterialTheme.colorScheme.secondary)
+                }
+                IconButton(onClick = { navController.navigate(NavigationItem.Settings.route) }) {
+                    Icon(imageVector = Icons.Rounded.Settings, contentDescription = "Settings", tint = MaterialTheme.colorScheme.secondary)
                 }
             }
         }

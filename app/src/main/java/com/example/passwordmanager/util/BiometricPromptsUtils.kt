@@ -1,49 +1,46 @@
 package com.example.passwordmanager.util
 
 import android.content.Context
-import android.util.Log
-import androidx.appcompat.app.AppCompatActivity
+import androidx.biometric.BiometricManager
+import androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_STRONG
 import androidx.biometric.BiometricPrompt
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
-import java.util.concurrent.Executor
+import javax.crypto.Cipher
 
-// Since we are using the same methods in more than one Activity, better give them their own file.
 object BiometricPromptUtils {
-    private const val TAG = "BiometricPromptUtils"
+
+    fun canAuthenticate(context: Context): Boolean =
+        BiometricManager.from(context).canAuthenticate(BIOMETRIC_STRONG) == BiometricManager.BIOMETRIC_SUCCESS
+
+    /**
+     * Errors (cancel, negative button, lockout) need no handling: the password field stays on
+     * screen behind the prompt. A non-matching finger keeps the prompt open.
+     */
     fun createBiometricPrompt(
         activity: FragmentActivity,
-        processSuccess: (BiometricPrompt.AuthenticationResult) -> Unit
+        onAuthenticated: (Cipher) -> Unit
     ): BiometricPrompt {
-        val executor = ContextCompat.getMainExecutor(activity)
-
         val callback = object : BiometricPrompt.AuthenticationCallback() {
-
-            override fun onAuthenticationError(errCode: Int, errString: CharSequence) {
-                super.onAuthenticationError(errCode, errString)
-                Log.d(TAG, "errCode is $errCode and errString is: $errString")
-            }
-
-            override fun onAuthenticationFailed() {
-                super.onAuthenticationFailed()
-                Log.d(TAG, "User biometric rejected.")
-            }
-
             override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
-                super.onAuthenticationSucceeded(result)
-                Log.d(TAG, "Authentication was successful")
-                processSuccess(result)
+                result.cryptoObject?.cipher?.let(onAuthenticated)
             }
         }
-        return BiometricPrompt( activity, executor, callback)
+        return BiometricPrompt(activity, ContextCompat.getMainExecutor(activity), callback)
     }
 
-    fun createPromptInfo(): BiometricPrompt.PromptInfo =
-        BiometricPrompt.PromptInfo.Builder().apply {
-            setTitle("Authenticate")
-//            setSubtitle(activity.getString(R.string.prompt_info_subtitle))
-            setDescription("Auntication for encryp and decrypt")
-            setConfirmationRequired(false)
-            setNegativeButtonText("Navigation button texts")
-        }.build()
+    fun unlockPromptInfo(): BiometricPrompt.PromptInfo =
+        promptInfo(title = "Unlock vault", negativeButton = "Use master password")
+
+    fun enablePromptInfo(): BiometricPrompt.PromptInfo =
+        promptInfo(title = "Turn on fingerprint unlock", negativeButton = "Cancel")
+
+    private fun promptInfo(title: String, negativeButton: String): BiometricPrompt.PromptInfo =
+        BiometricPrompt.PromptInfo.Builder()
+            .setTitle(title)
+            .setSubtitle("Confirm with your fingerprint")
+            .setAllowedAuthenticators(BIOMETRIC_STRONG)
+            .setConfirmationRequired(false)
+            .setNegativeButtonText(negativeButton)
+            .build()
 }
