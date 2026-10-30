@@ -28,6 +28,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -53,6 +54,7 @@ import com.example.passwordmanager.presentation.LockScreen.UnlockScreen
 import com.example.passwordmanager.presentation.NavigationItem
 import com.example.passwordmanager.ui.theme.PasswordManagerTheme
 import com.example.passwordmanager.ui.theme.shapes.BottomNavCustomShape
+import kotlinx.coroutines.launch
 
 class MainActivity : FragmentActivity() {
 
@@ -83,6 +85,7 @@ class MainActivity : FragmentActivity() {
             mutableStateOf(false)
         }
         val sheetState = rememberModalBottomSheetState()
+        val scope = rememberCoroutineScope()
 
         var selectedItemIndex by rememberSaveable {
             mutableStateOf(0)
@@ -138,7 +141,12 @@ class MainActivity : FragmentActivity() {
                 },
 
             ){
-                AddCredentialScreen(state = state, navController = navController, onEvent = viewModel::onEvent)
+                AddCredentialScreen(
+                    onEvent = viewModel::onEvent,
+                    onSaved = {
+                        scope.launch { sheetState.hide() }.invokeOnCompletion { isSheetOpen = false }
+                    }
+                )
             }
 
            Box(modifier = Modifier.padding(it)){
@@ -165,9 +173,8 @@ class MainActivity : FragmentActivity() {
             }
             composable(NavigationItem.Add.route) {
                 AddCredentialScreen(
-                    state = state,
-                    navController = navController,
-                    onEvent = viewModel::onEvent
+                    onEvent = viewModel::onEvent,
+                    onSaved = { navController.popBackStack() }
                 )
             }
             composable(NavigationItem.Favorite.route) {

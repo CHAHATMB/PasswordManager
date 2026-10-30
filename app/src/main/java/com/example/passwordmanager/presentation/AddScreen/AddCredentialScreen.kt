@@ -18,6 +18,10 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -25,18 +29,13 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.navigation.NavController
-import androidx.navigation.NavGraph.Companion.findStartDestination
 import com.example.passwordmanager.presentation.CredentialEvent
-import com.example.passwordmanager.presentation.CredentialState
-import com.example.passwordmanager.presentation.NavigationItem
-import com.example.passwordmanager.presentation.components.TextFieldAndLabel
+import com.example.passwordmanager.presentation.isCredentialFormValid
 
 @Composable
 fun AddCredentialScreen(
-    state: CredentialState,
-    navController: NavController,
-    onEvent: (CredentialEvent)->Unit
+    onEvent: (CredentialEvent)->Unit,
+    onSaved: () -> Unit
 ) {
     Scaffold (
         topBar = {
@@ -56,17 +55,22 @@ fun AddCredentialScreen(
         modifier = Modifier.background(MaterialTheme.colorScheme.background)
 //            .heightIn(min = 600.dp, max = 700.dp)
     ){
-        TextFields(it, state, onEvent, navController)
+        TextFields(it, onEvent, onSaved)
     }
 }
 
 @Composable
 private fun TextFields(
     it: PaddingValues,
-    state: CredentialState,
     onEvent: (CredentialEvent) -> Unit,
-    navController: NavController,
+    onSaved: () -> Unit,
 ) {
+    // Plain remember (not saveable) so typed passwords never land in the saved-state Bundle.
+    var website by remember { mutableStateOf("") }
+    var username by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+    var note by remember { mutableStateOf("") }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -74,9 +78,9 @@ private fun TextFields(
     ) {
 
         OutlinedTextField(
-            value = state.website.value,
+            value = website,
             onValueChange = {
-                state.website.value = it
+                website = it
             },
             modifier = Modifier
                 .fillMaxWidth()
@@ -89,8 +93,8 @@ private fun TextFields(
             textStyle = TextStyle(fontWeight = FontWeight.SemiBold, fontSize = 18.sp),
         )
         OutlinedTextField(
-            value = state.username.value, onValueChange = {
-                state.username.value = it
+            value = username, onValueChange = {
+                username = it
             },
             modifier = Modifier
                 .fillMaxWidth()
@@ -101,8 +105,8 @@ private fun TextFields(
             textStyle = TextStyle(fontWeight = FontWeight.SemiBold, fontSize = 18.sp)
         )
         OutlinedTextField(
-            value = state.password.value, onValueChange = {
-                state.password.value = it
+            value = password, onValueChange = {
+                password = it
             },
             modifier = Modifier
                 .fillMaxWidth()
@@ -113,8 +117,8 @@ private fun TextFields(
             textStyle = TextStyle(fontWeight = FontWeight.SemiBold, fontSize = 18.sp)
         )
         OutlinedTextField(
-            value = state.note.value, onValueChange = {
-                state.note.value = it
+            value = note, onValueChange = {
+                note = it
             },
             modifier = Modifier
                 .fillMaxWidth()
@@ -124,8 +128,6 @@ private fun TextFields(
             },
             textStyle = TextStyle(fontWeight = FontWeight.SemiBold, fontSize = 18.sp)
         )
-
-//        TextFieldAndLabel("")
 
         Row(
             modifier = Modifier.padding(16.dp),
@@ -137,20 +139,17 @@ private fun TextFields(
                 .clip(
                     RoundedCornerShape(corner = CornerSize(4.dp))
                 ),
+                enabled = isCredentialFormValid(website, password),
                 onClick = {
                     onEvent(
                         CredentialEvent.SaveCredential(
-                            website = state.website.value,
-                            username = state.username.value,
-                            password = state.password.value,
-                            note = state.note.value
+                            website = website,
+                            username = username,
+                            password = password,
+                            note = note
                         )
                     )
-                    navController.navigate(NavigationItem.Home.route) {
-                        popUpTo(navController.graph.findStartDestination().id) {
-                            this@navigate.launchSingleTop = true
-                        }
-                    }
+                    onSaved()
                 }) {
                 Text(text = "Added")
             }
