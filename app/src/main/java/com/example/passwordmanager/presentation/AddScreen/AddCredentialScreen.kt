@@ -33,12 +33,20 @@ import com.example.passwordmanager.ui.theme.Spacing
 @Composable
 fun AddCredentialScreen(
     onEvent: (CredentialEvent)->Unit,
+    loadPassphraseWords: suspend () -> List<String>,
     onSaved: () -> Unit,
     editing: Credential? = null
 ) {
     // Plain remember (not saveable) so typed passwords never land in the saved-state Bundle.
     var draft by remember { mutableStateOf(CredentialDraft(editing)) }
-    AddCredentialScreen(draft = draft, onDraftChange = { draft = it }, onEvent = onEvent, onSaved = onSaved, editing = editing)
+    AddCredentialScreen(
+        draft = draft,
+        onDraftChange = { draft = it },
+        onEvent = onEvent,
+        loadPassphraseWords = loadPassphraseWords,
+        onSaved = onSaved,
+        editing = editing
+    )
 }
 
 /** Adds a new credential, or edits [editing] in place when it is set. */
@@ -47,13 +55,14 @@ fun AddCredentialScreen(
     draft: CredentialDraft,
     onDraftChange: (CredentialDraft) -> Unit,
     onEvent: (CredentialEvent)->Unit,
+    loadPassphraseWords: suspend () -> List<String>,
     onSaved: () -> Unit,
     editing: Credential? = null
 ) {
     Scaffold (
         topBar = { AppTopBar(title = if (editing == null) "Add" else "Edit") }
     ){
-        TextFields(it, draft, onDraftChange, editing, onEvent, onSaved)
+        TextFields(it, draft, onDraftChange, editing, onEvent, loadPassphraseWords, onSaved)
     }
 }
 
@@ -64,12 +73,14 @@ private fun TextFields(
     onDraftChange: (CredentialDraft) -> Unit,
     editing: Credential?,
     onEvent: (CredentialEvent) -> Unit,
+    loadPassphraseWords: suspend () -> List<String>,
     onSaved: () -> Unit,
 ) {
     val (website, username, password, note) = draft
 
     if (draft.isGeneratorOpen) {
         GeneratorSheet(
+            loadPassphraseWords = loadPassphraseWords,
             onUse = { onDraftChange(draft.copy(password = it)) },
             onDismiss = { onDraftChange(draft.copy(isGeneratorOpen = false)) }
         )

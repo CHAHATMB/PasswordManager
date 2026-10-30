@@ -20,9 +20,12 @@ import com.example.passwordmanager.data.vault.VaultState
 import com.example.passwordmanager.util.QrImageReader
 import com.example.passwordmanager.util.SecureClipboard
 import com.example.passwordmanager.util.SystemClipboard
+import com.example.passwordmanager.util.parseWordlist
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 
 class AppContainer(context: Context) {
@@ -83,6 +86,13 @@ class AppContainer(context: Context) {
     val secureClipboard = SecureClipboard(SystemClipboard(appContext), applicationScope)
 
     val qrImageReader = QrImageReader(appContext.contentResolver)
+
+    // Parsed once on first use and kept for the process; the list is public, not a secret.
+    private val passphraseWords = applicationScope.async(Dispatchers.IO, start = CoroutineStart.LAZY) {
+        appContext.resources.openRawResource(R.raw.eff_large_wordlist).use(::parseWordlist)
+    }
+
+    suspend fun loadPassphraseWords(): List<String> = passphraseWords.await()
 
     init {
         applicationScope.launch {

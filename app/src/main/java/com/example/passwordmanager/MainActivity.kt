@@ -107,6 +107,7 @@ class MainActivity : FragmentActivity() {
 
     private val autoLockObserver get() = (application as PasswordManagerApp).container.autoLockObserver
     private val settingsStore get() = (application as PasswordManagerApp).container.settingsStore
+    private val loadPassphraseWords get() = (application as PasswordManagerApp).container::loadPassphraseWords
 
     // Registered on the activity, not in the vault's composition, so a result still arrives after a
     // lock during the trip (an export then deletes the empty file the picker created).
@@ -320,6 +321,7 @@ class MainActivity : FragmentActivity() {
                     draft = addDraft,
                     onDraftChange = { viewModel.onEvent(CredentialEvent.ChangeAddDraft(it)) },
                     onEvent = viewModel::onEvent,
+                    loadPassphraseWords = loadPassphraseWords,
                     onSaved = {
                         scope.launch { sheetState.hide() }.invokeOnCompletion { viewModel.onEvent(CredentialEvent.CloseAddSheet) }
                     }
@@ -354,6 +356,7 @@ class MainActivity : FragmentActivity() {
             composable(NavigationItem.Add.route) {
                 AddCredentialScreen(
                     onEvent = viewModel::onEvent,
+                    loadPassphraseWords = loadPassphraseWords,
                     onSaved = { navController.popBackStack() }
                 )
             }
@@ -462,6 +465,7 @@ class MainActivity : FragmentActivity() {
                 credential?.let {
                     AddCredentialScreen(
                         onEvent = viewModel::onEvent,
+                        loadPassphraseWords = loadPassphraseWords,
                         onSaved = { navController.popBackStack(CredentialRoutes.EDIT, inclusive = true) },
                         editing = it
                     )
