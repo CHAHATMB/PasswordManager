@@ -39,6 +39,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.window.SecureFlagPolicy
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.fragment.app.FragmentActivity
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.withResumed
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
@@ -53,6 +54,9 @@ import com.example.passwordmanager.data.vault.VaultState
 import com.example.passwordmanager.presentation.Authenticator.AuthenticatorEvent
 import com.example.passwordmanager.presentation.Authenticator.AuthenticatorScreen
 import com.example.passwordmanager.presentation.Authenticator.AuthenticatorViewModel
+import com.example.passwordmanager.presentation.Authenticator.TotpExportScreen
+import com.example.passwordmanager.presentation.Authenticator.TotpExportViewModel
+import com.example.passwordmanager.presentation.AuthenticatorRoutes
 import com.example.passwordmanager.presentation.AddScreen.AddCredentialScreen
 import com.example.passwordmanager.presentation.DetailScreen.CredentialDetailScreen
 import com.example.passwordmanager.presentation.HomeScreen.CredentialScreen
@@ -240,7 +244,7 @@ class MainActivity : FragmentActivity() {
         }
         // Hidden on Edit and while typing (e.g. Home search): with adjustResize the bar and
         // FAB would ride above the keyboard.
-        val isBottomBarVisible = currentRoute != CredentialRoutes.EDIT && !isKeyboardOpen
+        val isBottomBarVisible = currentRoute != CredentialRoutes.EDIT && currentRoute != AuthenticatorRoutes.EXPORT && !isKeyboardOpen
         val isFabVisible = isBottomBarVisible && currentRoute in FAB_ROUTES
         Scaffold(modifier = Modifier.fillMaxSize(),
             snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -347,7 +351,20 @@ class MainActivity : FragmentActivity() {
                     dialog = authenticatorViewModel.dialog,
                     onEvent = authenticatorViewModel::onEvent,
                     onScanQrCode = ::openQrScanner,
-                    onScanImage = ::openImagePicker
+                    onScanImage = ::openImagePicker,
+                    onExport = { navController.navigate(AuthenticatorRoutes.EXPORT) }
+                )
+            }
+            composable(AuthenticatorRoutes.EXPORT) { entry ->
+                // Scoped to this entry, so leaving the screen discards the accounts and QR bitmaps.
+                val exportViewModel = viewModel<TotpExportViewModel>(viewModelStoreOwner = entry, factory = TotpExportViewModel.Factory)
+                val step by exportViewModel.state.collectAsState()
+                TotpExportScreen(
+                    step = step,
+                    onEvent = exportViewModel::onEvent,
+                    onClose = {
+                        if (navController.currentBackStackEntry?.id == entry.id) navController.popBackStack()
+                    }
                 )
             }
             composable(

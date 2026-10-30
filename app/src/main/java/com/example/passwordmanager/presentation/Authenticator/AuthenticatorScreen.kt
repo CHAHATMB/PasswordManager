@@ -13,6 +13,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.MoreVert
+import androidx.compose.material.icons.rounded.QrCode
 import androidx.compose.material.icons.rounded.Shield
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
@@ -50,7 +51,8 @@ fun AuthenticatorScreen(
     dialog: AuthenticatorDialog?,
     onEvent: (AuthenticatorEvent) -> Unit,
     onScanQrCode: () -> Unit,
-    onScanImage: () -> Unit
+    onScanImage: () -> Unit,
+    onExport: () -> Unit
 ) {
     AuthenticatorDialogs(
         dialog = dialog,
@@ -59,7 +61,33 @@ fun AuthenticatorScreen(
         onScanQrCode = onScanQrCode,
         onScanImage = onScanImage
     )
-    Scaffold(topBar = { AppTopBar(title = "Authenticator") }) {
+    var isMenuOpen by remember { mutableStateOf(false) }
+    Scaffold(
+        topBar = {
+            AppTopBar(
+                title = "Authenticator",
+                actions = {
+                    if (state.items.isNotEmpty()) {
+                        Box {
+                            IconButton(onClick = { isMenuOpen = true }) {
+                                Icon(imageVector = Icons.Rounded.MoreVert, contentDescription = "More options")
+                            }
+                            DropdownMenu(expanded = isMenuOpen, onDismissRequest = { isMenuOpen = false }) {
+                                DropdownMenuItem(
+                                    text = { Text(text = "Export accounts") },
+                                    leadingIcon = { Icon(imageVector = Icons.Rounded.QrCode, contentDescription = null) },
+                                    onClick = {
+                                        isMenuOpen = false
+                                        onExport()
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+            )
+        }
+    ) {
         Box(modifier = Modifier.padding(it)) {
             if (!state.isLoaded) {
                 Unit

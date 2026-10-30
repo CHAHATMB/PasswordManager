@@ -4,6 +4,7 @@ import androidx.room.Entity
 import androidx.room.PrimaryKey
 import com.example.passwordmanager.util.totp.Base32
 import com.example.passwordmanager.util.totp.OtpAuthAccount
+import com.example.passwordmanager.util.totp.OtpAuthResult
 import com.example.passwordmanager.util.totp.Totp
 import com.example.passwordmanager.util.totp.TotpAlgorithm
 
@@ -35,6 +36,12 @@ data class TotpAccount(
     fun secondsRemaining(unixSeconds: Long): Int = Totp.secondsRemaining(unixSeconds, period)
 
     override fun toString() = "TotpAccount(id=$id, issuer=$issuer, accountName=$accountName)"
+}
+
+/** The stored account as an otpauth setup, e.g. for [com.example.passwordmanager.util.totp.OtpAuthUri.build]. */
+fun TotpAccount.toOtpAuthAccount(): OtpAuthAccount {
+    val result = OtpAuthAccount.create(issuer, accountName, secret, algorithm, digits, period)
+    return checkNotNull(result as? OtpAuthResult.Totp) { "Stored account is not a valid TOTP setup" }.account
 }
 
 fun OtpAuthAccount.toTotpAccount(createdAt: Long) = TotpAccount(

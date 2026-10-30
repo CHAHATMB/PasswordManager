@@ -20,7 +20,8 @@ enum class Screen {
     SETTINGS,
     DETAIL,
     EDIT,
-    AUTHENTICATOR
+    AUTHENTICATOR,
+    TOTP_EXPORT
 }
 sealed class NavigationItem(val route: String, val selectedIcon: ImageVector, val unSelectedIcon: ImageVector, val title: String ) {
     object Home : NavigationItem(Screen.HOME.name, Icons.Filled.Key, Icons.Outlined.Key, "Passwords")
@@ -37,4 +38,8 @@ object CredentialRoutes {
 
     fun detail(id: Int) = "${Screen.DETAIL.name}/$id"
     fun edit(id: Int) = "${Screen.EDIT.name}/$id"
+}
+
+object AuthenticatorRoutes {
+    val EXPORT = Screen.TOTP_EXPORT.name
 }
