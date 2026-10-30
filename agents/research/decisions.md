@@ -37,3 +37,33 @@ Decided by the planner from `features.md`, `security.md`, `codebase.md`. Develop
 - Unit-test deps: `kotlinx-coroutines-test`, Robolectric + `androidx.test:core` (for in-memory Room DAO tests with the plain Room factory; SQLCipher native lib is not used in JVM tests).
 - Backups: `allowBackup="false"` + exclusion rules in `data_extraction_rules.xml` / `backup_rules.xml`. The encrypted export (feature 05) is the only supported migration path.
 - Biometric unlock is CryptoObject-bound (`BIOMETRIC_STRONG` only); device PIN never replaces the master password.
+
+## v2 decisions (features 07–11, research in `v2-features.md`)
+
+## D6. Design system: one `AppTheme`, tokens in `ui/theme/`
+- `AppTheme` (renamed from `PasswordManagerTheme`, brand-neutral) owns colour schemes, `Typography`, `Shapes` and `ExtendedColors` (success/warning via CompositionLocal); `Spacing` is a plain `object`. A redesign edits `ui/theme/` only.
+- Static teal scheme (seed `#00796B`), light + dark, **no dynamic colour**. Follows the system; a System/Light/Dark setting in `SettingsStore` is in scope because it is small.
+- Standard M3 `NavigationBar` + per-tab FAB replace `BottomNavCustomShape` and the centre notched FAB (needed anyway for 4 tabs).
+
+## D7. Branding keeps data identifiers
+- Display name "Vaultly" everywhere the user sees it. `applicationId`, package, DB name, vault AAD `passwordmanager-vault-v*` and backup `format = "pm-export"` stay unchanged (changing them would orphan existing vaults/backups).
+- Icon: Material Symbols `shield_lock` (Apache 2.0), adaptive vector icon; splash via `androidx.core:core-splashscreen:1.0.1`.
+
+## D8. QR: `zxing-android-embedded:4.3.0`
+- Simplest robust option: ActivityResult `ScanContract`, built-in permission handling, `BarcodeEncoder` for export QR, zxing core for "scan from image". Scanner activity subclassed to set FLAG_SECURE. Rejected CameraX + custom analyzer (more code) and ML Kit (proprietary).
+
+## D9. TOTP storage: separate `TotpAccount` table in the existing vault DB
+- Own Room entity/DAO/repository in `CredentialDatabase` (SQLCipher ⇒ encrypted at rest, gone from memory on lock). Separate "Authenticator" tab; no link to credentials (not needed).
+- Secret stored as normalised Base32 `String` (same handling as passwords; DB encryption protects it). Only TOTP; HOTP/MD5 rejected with a clear message.
+- TOTP/HOTP, Base32, otpauth parsing/building are pure Kotlin in `util/totp/` (no Android types) so they are JVM-unit-testable.
+
+## D10. Google migration payload: hand-written protobuf reader
+- ~60-line varint/length-delimited reader for the 2 messages; no `protobuf-javalite`/Gradle plugin. Each batch QR is imported independently.
+
+## D11. Schema changes use Room AutoMigration (supersedes "destructive" for v2)
+- Adding tables is a trivial `@AutoMigration` (schemas are exported), so the 09 (v1→v2) and 11 (v2→v3) changes keep the user's data. Destructive migration stays acceptable as a fallback only if an auto-migration proves impossible; record it in the dev-log.
+- `CredentialDatabase` is not renamed (renaming moves the schema folder and breaks auto-migration).
+
+## D12. Backup format v2 carries TOTP and notes
+- Encrypted payload becomes a JSON object `{ "credentials": [...], "totp": [...], "notes": [...] }`, header `version = 2`; `totp`/`notes` default to empty lists. Import still accepts v1 (array payload). Same crypto, AAD and KDF as v1.
+- Notes are included in 11 even though not explicitly requested: without it, notes would be lost on phone change (the backup is the only migration path, D5).
