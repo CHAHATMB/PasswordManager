@@ -1,6 +1,6 @@
 # Encrypted backup and import
 
-Status: PLANNED
+Status: DONE
 Backlog ID: 05
 
 ## Goal
