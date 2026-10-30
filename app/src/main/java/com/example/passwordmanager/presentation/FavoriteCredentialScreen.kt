@@ -35,7 +35,9 @@ fun FavoriteCredentialScreen(
         }
     ){
         Box(modifier = Modifier.padding(it)) {
-            if (state.credentials.isEmpty()) {
+            if (!state.isLoaded) {
+                Unit
+            } else if (state.credentials.isEmpty()) {
                 EmptyState(
                     icon = Icons.Rounded.FavoriteBorder,
                     title = "No favourites yet",

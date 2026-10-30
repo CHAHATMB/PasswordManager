@@ -39,12 +39,12 @@ class CredentialViewModel(
 
     val state = combine(_searchText, isSortedByWebsite) { query, sortByWebsite -> query to sortByWebsite }
         .flatMapLatest { (query, sortByWebsite) -> repository.search(query, sortByWebsite) }
-        .map { CredentialState(credentials = it) }
+        .map { CredentialState(credentials = it, isLoaded = true) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), CredentialState())
 
     val favorites = isSortedByWebsite
         .flatMapLatest { repository.getFavorites(it) }
-        .map { CredentialState(credentials = it) }
+        .map { CredentialState(credentials = it, isLoaded = true) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), CredentialState())
 
     private val _deletedCredentials = Channel<Credential>(Channel.BUFFERED)

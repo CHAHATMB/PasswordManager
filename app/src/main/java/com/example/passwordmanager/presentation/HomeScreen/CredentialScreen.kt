@@ -90,7 +90,9 @@ fun CredentialScreen(
         // Padding (not contentPadding) so the list is clipped below the search field instead of
         // scrolling under it.
         Box(modifier = Modifier.padding(it)) {
-            if (state.credentials.isEmpty()) {
+            if (!state.isLoaded) {
+                Unit
+            } else if (state.credentials.isEmpty()) {
                 if (searchText.isBlank()) {
                     EmptyState(
                         icon = Icons.Rounded.Shield,
