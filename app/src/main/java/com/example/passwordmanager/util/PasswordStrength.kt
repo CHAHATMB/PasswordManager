@@ -31,8 +31,8 @@ enum class PasswordStrength {
 
 /**
  * Bits for a random pick from the pools the password uses, per counted character. A character
- * that appeared within the previous [REPEAT_WINDOW] characters, or that is one step from the
- * previous one (`abc`, `321`), adds nothing.
+ * that appeared within the previous [REPEAT_WINDOW] characters, or that extends a run of three or
+ * more one-step characters (the `c` in `abc`, the `1` in `321`), adds nothing.
  */
 private fun entropyBits(password: String): Double {
     var poolSize = 0
@@ -44,7 +44,8 @@ private fun entropyBits(password: String): Double {
 
     val counted = password.indices.count { index ->
         val isRepeat = (maxOf(0, index - REPEAT_WINDOW) until index).any { password[it] == password[index] }
-        val continuesSequence = index > 0 && abs(password[index] - password[index - 1]) == 1
+        val step = if (index > 1) password[index] - password[index - 1] else 0
+        val continuesSequence = abs(step) == 1 && step == password[index - 1] - password[index - 2]
         !isRepeat && !continuesSequence
     }
     return counted * log2(poolSize.toDouble())

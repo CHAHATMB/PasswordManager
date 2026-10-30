@@ -33,6 +33,12 @@ class PasswordStrengthTest {
     }
 
     @Test
+    fun twoCharacterStepsAreNotPenalised() {
+        // Contains the steps 12, 54 and 76 but no run of three.
+        assertNotEquals(PasswordStrength.Weak, PasswordStrength.of("58120374961548302769"))
+    }
+
+    @Test
     fun longRandomDigitsAreNotWeak() {
         val digits = "2491477505289385805377015107564782692923256729024604752301486909"
         assertNotEquals(PasswordStrength.Weak, PasswordStrength.of(digits))
