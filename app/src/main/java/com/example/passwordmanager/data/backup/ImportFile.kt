@@ -3,7 +3,8 @@ package com.example.passwordmanager.data.backup
 import com.example.passwordmanager.data.Credential
 import java.io.InputStream
 
-const val MAX_IMPORT_FILE_MEGABYTES = 10
+// Bounds memory too: every row of a file this size becomes objects on the heap at once.
+const val MAX_IMPORT_FILE_MEGABYTES = 5
 private const val MAX_IMPORT_FILE_BYTES = MAX_IMPORT_FILE_MEGABYTES * 1024 * 1024
 private const val INITIAL_BUFFER_BYTES = 8192
 
@@ -11,8 +12,10 @@ private const val INITIAL_BUFFER_BYTES = 8192
 class ParsedImport(val credentials: List<Credential>, val invalid: Int)
 
 /** Rows without a website or password can't be saved, the same rule as the Add form. */
+fun Credential.isImportable(): Boolean = website.isNotBlank() && password.isNotBlank()
+
 fun List<Credential>.toParsedImport(): ParsedImport {
-    val (valid, invalid) = partition { it.website.isNotBlank() && it.password.isNotBlank() }
+    val (valid, invalid) = partition { it.isImportable() }
     return ParsedImport(valid, invalid.size)
 }
 
@@ -22,20 +25,20 @@ fun List<Credential>.toParsedImport(): ParsedImport {
  */
 fun InputStream.readImportFile(limit: Int = MAX_IMPORT_FILE_BYTES): ByteArray {
     var buffer = ByteArray(minOf(INITIAL_BUFFER_BYTES, limit + 1))
-    var size = 0
-    while (true) {
-        if (size == buffer.size) {
-            val grown = buffer.copyOf(minOf(buffer.size * 2, limit + 1))
-            buffer.fill(0)
-            buffer = grown
+    try {
+        var size = 0
+        while (true) {
+            if (size == buffer.size) {
+                val grown = buffer.copyOf(minOf(buffer.size * 2, limit + 1))
+                buffer.fill(0)
+                buffer = grown
+            }
+            val read = read(buffer, size, buffer.size - size)
+            if (read < 0) return buffer.copyOf(size)
+            size += read
+            if (size > limit) throw BackupException.FileTooLarge()
         }
-        val read = read(buffer, size, buffer.size - size)
-        if (read < 0) break
-        size += read
-        if (size > limit) {
-            buffer.fill(0)
-            throw BackupException.FileTooLarge()
-        }
+    } finally {
+        buffer.fill(0)
     }
-    return buffer.copyOf(size).also { buffer.fill(0) }
 }

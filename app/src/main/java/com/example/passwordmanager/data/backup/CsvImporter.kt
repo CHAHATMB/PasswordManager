@@ -28,7 +28,7 @@ object CsvImporter {
     private val format = CSVFormat.RFC4180.builder()
         .setHeader()
         .setSkipHeaderRecord(true)
-        .setIgnoreHeaderCase(true)
+        .setIgnoreEmptyLines(true)
         .build()
 
     /** [now] becomes the creation time of every imported credential. */
@@ -38,8 +38,16 @@ object CsvImporter {
         val reader = InputStreamReader(ByteArrayInputStream(file, start, file.size - start), Charsets.UTF_8.newDecoder())
         try {
             CSVParser(reader, format).use { parser ->
-                val layout = layoutOf(parser.headerNames)
-                return parser.mapNotNull { it.toCredential(layout, now) }.toParsedImport()
+                val columns = parser.headerNames.withIndex().associate { (index, name) -> name.trim().lowercase() to index }
+                val layout = layoutOf(columns.keys)
+                // Invalid rows are only counted, so a file of junk rows can't fill the heap.
+                val credentials = mutableListOf<Credential>()
+                var invalid = 0
+                for (record in parser) {
+                    val credential = record.toCredential(columns, layout, now) ?: continue
+                    if (credential.isImportable()) credentials += credential else invalid++
+                }
+                return ParsedImport(credentials, invalid)
             }
         } catch (e: CharacterCodingException) {
             throw BackupException.NotText(e)
@@ -55,8 +63,8 @@ object CsvImporter {
         }
     }
 
-    private fun layoutOf(headerNames: List<String>): CsvLayout {
-        val columns = headerNames.map { it.trim().lowercase() }.toSet()
+    /** [columns] are the header names, trimmed and lowercased. */
+    private fun layoutOf(columns: Set<String>): CsvLayout {
         val layout = if (columns.any { it.startsWith(BITWARDEN_COLUMN_PREFIX) }) CsvLayout.Bitwarden else CsvLayout.Google
         val missing = layout.requiredColumns.filterNot { it in columns }
         if (missing.isNotEmpty()) throw BackupException.MissingColumns(missing)
@@ -64,27 +72,27 @@ object CsvImporter {
     }
 
     /** Null for rows that aren't logins (Bitwarden notes, cards and identities). */
-    private fun CSVRecord.toCredential(layout: CsvLayout, now: Long): Credential? = when (layout) {
-        CsvLayout.Google -> Credential(
-            website = websiteOf(value("url"), value("name")),
-            username = value("username"),
-            password = value("password"),
-            dataCreate = now,
-            note = value("note")
-        )
-        CsvLayout.Bitwarden -> if (value("type").trim() != BITWARDEN_LOGIN_TYPE) null else Credential(
-            // Bitwarden puts every URI of a login in this one cell, separated by commas.
-            website = websiteOf(value("login_uri").substringBefore(','), value("name")),
-            username = value("login_username"),
-            password = value("login_password"),
-            dataCreate = now,
-            isFav = value("favorite").trim().let { it == "1" || it.equals("true", ignoreCase = true) },
-            note = value("notes")
-        )
+    private fun CSVRecord.toCredential(columns: Map<String, Int>, layout: CsvLayout, now: Long): Credential? {
+        fun value(column: String): String = columns[column]?.takeIf { it < size() }?.let { get(it) } ?: ""
+        return when (layout) {
+            CsvLayout.Google -> Credential(
+                website = websiteOf(value("url"), value("name")),
+                username = value("username"),
+                password = value("password"),
+                dataCreate = now,
+                note = value("note")
+            )
+            CsvLayout.Bitwarden -> if (value("type").trim() != BITWARDEN_LOGIN_TYPE) null else Credential(
+                // Bitwarden puts every URI of a login in this one cell, separated by commas.
+                website = websiteOf(value("login_uri").substringBefore(','), value("name")),
+                username = value("login_username"),
+                password = value("login_password"),
+                dataCreate = now,
+                isFav = value("favorite").trim().let { it == "1" || it.equals("true", ignoreCase = true) },
+                note = value("notes")
+            )
+        }
     }
-
-    /** Empty when the column is absent or this row is shorter than the header. */
-    private fun CSVRecord.value(column: String): String = if (isSet(column)) get(column) else ""
 
     /** The URL's host (`https://github.com/login` → `github.com`), else the URL as written, else the name. */
     private fun websiteOf(url: String, name: String): String {

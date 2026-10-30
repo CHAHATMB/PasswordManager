@@ -63,6 +63,25 @@ class CsvImporterTest {
     }
 
     @Test
+    fun blankLinesAreIgnoredNotCountedInvalid() {
+        val csv = "name,url,username,password\n\n,https://a.example/,ann,secret\n\n\n"
+
+        val parsed = CsvImporter.parse(csv.encodeToByteArray(), now)
+
+        assertEquals(listOf("a.example"), parsed.credentials.map { it.website })
+        assertEquals(0, parsed.invalid)
+    }
+
+    @Test
+    fun headerNamesWithSurroundingSpacesStillMatch() {
+        val csv = "name, url ,username , password\nA,https://a.example/,ann,secret\n"
+
+        val credential = CsvImporter.parse(csv.encodeToByteArray(), now).credentials.single()
+
+        assertEquals(Credential(website = "a.example", username = "ann", password = "secret", dataCreate = now, note = ""), credential)
+    }
+
+    @Test
     fun rowWithNoUrlAndNoNameIsInvalid() {
         val parsed = CsvImporter.parse("name,url,username,password\n,,ann,secret\n".encodeToByteArray(), now)
 
