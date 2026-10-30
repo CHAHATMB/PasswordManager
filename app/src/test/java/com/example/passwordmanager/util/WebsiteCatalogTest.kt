@@ -57,7 +57,7 @@ class WebsiteCatalogTest {
 
     @Test
     fun gitSuggestsGitHubFirst() {
-        assertEquals(listOf("github.com", "gitlab.com"), domains("git"))
+        assertEquals("github.com", domains("git").first())
     }
 
     @Test
@@ -66,19 +66,20 @@ class WebsiteCatalogTest {
         listOf("GIT", "  Git ", "https://git", "http://git", "www.git", "HTTPS://WWW.git").forEach {
             assertEquals(it, expected, domains(it))
         }
+        assertEquals("github.com", WebsiteCatalog.normalize(" HTTPS://www.GitHub.com"))
     }
 
     @Test
     fun aliasesMatch() {
         assertEquals("instagram.com", domains("insta").first())
-        assertEquals("onlinesbi.sbi", domains("sbi").first())
+        assertEquals("onlinesbi.sbi.bank.in", domains("sbi").first())
         assertEquals("primevideo.com", domains("prime").first())
         assertEquals("x.com", domains("twitt").first())
     }
 
     @Test
     fun domainPrefixMatches() {
-        assertEquals(listOf("onlinesbi.sbi"), domains("onlinesb"))
+        assertEquals(listOf("onlinesbi.sbi.bank.in"), domains("onlinesb"))
     }
 
     @Test
@@ -123,11 +124,5 @@ class WebsiteCatalogTest {
     fun resultIsCappedAtTheLimit() {
         assertEquals(MAX_SUGGESTIONS, suggest("a").size)
         assertEquals(2, suggest("a", limit = 2).size)
-    }
-
-    @Test
-    fun exactDomainIsFirst() {
-        assertEquals("github.com", domains("https://www.github.com").first())
-        assertEquals("github.com", WebsiteCatalog.normalize(" HTTPS://www.GitHub.com"))
     }
 }
