@@ -1,12 +1,29 @@
-# Verify – <Feature name>
+# Verify – Design system and modern UI
 
-- Build commit: <sha>
-- Device: <AVD name / API level>
-- Result: PASS | FAIL
+- Build commit: 2d444fa (last code commit 61f9c85). Debug via `./gradlew installDebug`. Secure checks (rows 13–14) ran on the unmodified build. For the visual screenshots, FLAG_SECURE (activity) and `SecureFlagPolicy.SecureOn` (add sheet, generator sheet, backup dialogs, `ConfirmDialog`) were switched off in a local edit that was never committed, then restored with `git checkout`.
+- Device: AVD `Pixel_9a` (sdk_gphone64_arm64, API 36), headless.
+- Result: **INCOMPLETE (blocked)**. Nothing failed in what was tested, but the run stopped partway (see Issues #1). This is not a PASS.
 
 ## Scenarios
 | # | Acceptance criterion | Steps | Result | Screenshot |
 |---|---|---|---|---|
+| 1 | Setup screen, light + dark | `pm clear`, system light → Setup. `cmd uimode night yes` → same screen | PASS: teal shield and button, outlined fields. Status bar icons visible in both modes | 01-setup-light.png, 02-setup-dark.png |
+| 2 | Empty vault state, light + dark | Created vault `correcthorse1` → Home | PASS: "Your vault is empty / Tap + to save your first password.", M3 bar (Passwords, Favorites) + FAB | 03-home-empty-light.png, 04-home-empty-dark.png |
+| 3 | Add sheet + strength meter + generator (light) | FAB → website/username, `weak` → "Strength: Weak" (red). Generate → sheet with Strong (green), length slider, switches. Use → field filled, Strong | PASS | 05-add-sheet-weak-light.png, 06-generator-sheet-light.png, 08-add-sheet-generated-light.png |
+| 4 | Home list, ItemRow, More actions menu (light) | Added github.com/alice, example.com/bob, gitlab.com/erin (generated). Favourite github. More actions on bob → Show password / Delete. Show → `ex-pass-2` shown | PASS: monogram avatars, Copy + Favourite inline, no purple | 09-home-list-light.png, 10-home-row-menu-light.png, 11-home-list-revealed-light.png |
+| 5 | Bar/FAB hidden while keyboard open | Tap search → `mInputShown=true`, no Passwords/Favorites/Add nodes. IME Done → `mInputShown=false`, bar and FAB back | PASS | 12-home-search-keyboard-light.png, 13-home-no-results-keyboard-light.png |
+| 6 | Search with no hits → "No results" | Search `zzznomatch` | PASS: "No results / Nothing matches “zzznomatch”." | 13-…, 14-home-no-results-light.png |
+| 7 | Favourites list + empty favourites (light) | Favorites tab → github.com only. Unfavourite → "No favourites yet". Re-favourited from Home | PASS | 15-favorites-light.png, 16-favorites-empty-light.png |
+| 8 | Detail + Edit; bar hidden on Edit (light) | Tap github.com → Detail (back, favourite, edit, delete in top bar; copy/reveal). Edit → no Passwords/Favorites/Add nodes. Note `edited-note` → Save → shown on Detail | PASS | 17-detail-light.png, 18-edit-light.png, 19-detail-after-edit-light.png |
+| 9 | Settings + backup dialogs (light) | Settings: Theme segmented (System/Light/Dark), auto-lock radios, Backup buttons. Export dialog, CSV warning, export password dialog, picker → SAVE → "Backup saved" (728 B file in Downloads) | PASS | 20-settings-light.png, 21–24-backup-*.png |
+| 10 | Import backup (regression) | Import backup → `passwords-export.json` → `backup-pass-12` → Import | NOT RUN: the emulator froze here (Issue #1) | – |
+| 11 | Dark mode on every screen; Settings → Theme Light/Dark/System applies immediately, survives force-stop, applies on Unlock; no white flash on cold start | – | NOT RUN (blocked) | – |
+| 12 | Non-teal wallpaper keeps teal | – | NOT RUN (blocked). Code check only: no `dynamicColor`/`dynamicLightColorScheme` in `app/src/main` | – |
+| 13 | FLAG_SECURE: generator sheet and backup dialogs | Unmodified build: generator sheet open → screencap all black. Export master-password dialog and CSV warning dialog open (confirmed by uiautomator) → screencap black except the system bars | PASS | secure-generator-sheet-black.png, secure-backup-dialog-black.png, secure-csv-warning-dialog-black.png |
+| 14 | `Color(0x` / `.sp` outside `ui/theme` | `grep -rn "Color(0x" app/src/main/java --include='*.kt' \| grep -v ui/theme` and the same for `[0-9]\.sp` | PASS: both return nothing. Fonts left: Poppins regular/medium/semibold | – |
+| 15 | Regression: relaunch + unlock, copy, delete + Undo, sort, "vault is empty" flash after unlock | – | NOT RUN (blocked) | – |
 
 ## Issues found
-- <description, repro steps, severity>
+1. **Blocker for verification (environment, not app):** the emulator froze during the backup import. Repro: Settings → Import backup → pick `passwords-export.json` → enter `backup-pass-12` → Import. After that, `uiautomator dump`, `screencap`, `dumpsys window`, `adb shell echo` and `adb emu avd status` all hung with no output. `qemu-system-aarch64` (PID 34709) stayed at 0 % CPU for more than 3 minutes, and `adb devices` still listed `emulator-5554 device`. Restarting the emulator (kill + cold boot) was denied by the tool permission policy, so the run stopped there. The VM froze completely at 0 % host CPU, so the app is an unlikely cause. But it froze while Argon2 was running the import, so when the run continues, repeat row 10 and watch for it. Rows 10–12 and 15 still need to run, plus the dark-mode screenshots of the add/generator/list/favourites/detail/edit/settings/backup screens.
+2. Low (probably pre-existing, out of scope): switching system night mode while the add sheet or generator sheet is open recreates the Activity, and the sheet closes, so the typed input is lost. Repro: Home → FAB → type a website → Generate → `adb shell cmd uimode night yes` → back on Home with no sheet. The sheet's open state is not saved across a configuration change.
+- Harness notes, not app bugs: Gboard runs in its collapsed floating-toolbar mode on this AVD. With it, `KEYCODE_ESCAPE` doesn't hide the IME, and Back with the IME open leaves the app instead of only closing the keyboard. The toolbar's Done key closes it normally. On the multi-line Note field, Done added a trailing newline to `edited-note`.
