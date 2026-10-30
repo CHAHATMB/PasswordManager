@@ -101,7 +101,7 @@ class LockViewModel(
             try {
                 session.disableBiometric()
             } catch (e: IOException) {
-                // The header write failed; the blob stays, so the next lock retries and fails the same way.
+                // The header write failed; the blob stays, so the next biometric attempt retries the disable.
             }
         }
         return null
