@@ -26,6 +26,10 @@ import androidx.compose.material3.ModalBottomSheetDefaults
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -72,6 +76,7 @@ import com.example.passwordmanager.ui.theme.PasswordManagerTheme
 import com.example.passwordmanager.ui.theme.shapes.BottomNavCustomShape
 import com.example.passwordmanager.util.BiometricPromptUtils
 import javax.crypto.Cipher
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
 class MainActivity : FragmentActivity() {
@@ -146,9 +151,24 @@ class MainActivity : FragmentActivity() {
 
         val state by viewModel.state.collectAsState()
         val navController = rememberNavController()
+        val snackbarHostState = remember { SnackbarHostState() }
+        LaunchedEffect(Unit) {
+            // collectLatest: a newer delete replaces the pending Undo instead of queueing behind it.
+            viewModel.deletedCredentials.collectLatest { credential ->
+                val result = snackbarHostState.showSnackbar(
+                    message = "Deleted ${credential.website}",
+                    actionLabel = "Undo",
+                    duration = SnackbarDuration.Short
+                )
+                if (result == SnackbarResult.ActionPerformed) {
+                    viewModel.onEvent(CredentialEvent.RestoreCredential(credential))
+                }
+            }
+        }
         Scaffold(modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background),
+            snackbarHost = { SnackbarHost(snackbarHostState) },
             bottomBar = {
                 MyBottomAppBarWithFab(
                     content = {

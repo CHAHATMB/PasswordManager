@@ -6,6 +6,8 @@ sealed interface CredentialEvent {
     object SortCredential: CredentialEvent
 
     data class DeleteCredential( var credential: Credential): CredentialEvent
+    /** Re-inserts a deleted credential with its original id. */
+    data class RestoreCredential(val credential: Credential): CredentialEvent
     data class SaveCredential(
         var website: String,
         var username: String,

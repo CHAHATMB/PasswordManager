@@ -11,6 +11,7 @@ import com.example.passwordmanager.data.CredentialRepository
 import com.example.passwordmanager.data.vault.VaultException
 import com.example.passwordmanager.util.SecureClipboard
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -18,6 +19,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -42,13 +44,23 @@ class CredentialViewModel(
         .map { CredentialState(credentials = it) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), CredentialState())
 
+    private val _deletedCredentials = Channel<Credential>(Channel.BUFFERED)
+    /** Each credential right after it is deleted, so the UI can offer Undo. */
+    val deletedCredentials = _deletedCredentials.receiveAsFlow()
+
     fun credential(id: Int): Flow<Credential?> = repository.getById(id)
 
     fun onEvent( event: CredentialEvent ){
         when(event){
 
             is CredentialEvent.DeleteCredential -> {
-                write { repository.deleteCredential(event.credential) }
+                write {
+                    repository.deleteCredential(event.credential)
+                    _deletedCredentials.send(event.credential)
+                }
+            }
+            is CredentialEvent.RestoreCredential -> {
+                write { repository.upsertCredential(event.credential) }
             }
             is CredentialEvent.SaveCredential -> {
                 if (!isCredentialFormValid(event.website, event.password)) return
