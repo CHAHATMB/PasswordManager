@@ -35,11 +35,21 @@ class CredentialRepository(private val session: VaultSession) {
             if (state is VaultState.Unlocked) query(state.database.dao) else flowOf(lockedValue)
         }
 
+    /** Throws [VaultException.Locked] when locked. */
+    suspend fun getAll(): List<Credential> = write { it.getAll() }
+
+    /**
+     * Inserts in one transaction, skipping duplicates of saved credentials (same website and
+     * username, ignoring case). Returns how many were inserted. Throws [VaultException.Locked] when locked.
+     */
+    suspend fun insertSkippingDuplicates(credentials: List<Credential>): Int =
+        write { it.insertSkippingDuplicates(credentials) }
+
     @VisibleForTesting
-    internal suspend fun write(action: suspend (CredentialDao) -> Unit) {
+    internal suspend fun <T> write(action: suspend (CredentialDao) -> T): T {
         val state = session.state.value as? VaultState.Unlocked ?: throw VaultException.Locked()
         try {
-            action(state.database.dao)
+            return action(state.database.dao)
         } catch (e: CancellationException) {
             // A subclass of IllegalStateException; it must propagate, not become Locked.
             throw e
