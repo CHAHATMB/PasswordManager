@@ -25,3 +25,15 @@
 1. **Blocker for verification (environment, not app):** the emulator froze again, like 07 Round 1. Repro: `am force-stop com.example.passwordmanager` while `screenrecord` was starting (cold-start splash check). After that, `adb shell echo`, `am force-stop` and `dumpsys` hung for over 3 minutes. `qemu-system-aarch64` (PID 34709) stayed at ~0 % CPU, and `adb devices` still listed `emulator-5554 device`. Per instructions the emulator was not restarted. Still to do: row 3 (splash light/dark, no white flash), row 4b (setup welcome, needs `pm clear` and then restoring the vault from `passwords-export.json`), and reinstalling the unmodified build.
 - No app defects found in the rows that ran.
 - Harness note: a Vaultly shortcut was added to the launcher home screen for the themed-icon check and is still there.
+
+## Round 2
+- Build commit: 09efb63 (09 build, with a temporary FLAG_SECURE-off edit for screenshots that was reverted with `git checkout` and never committed). Installed with `adb install -r` over the 08 screenshot build.
+- Result: **INCOMPLETE (blocked)**. The emulator froze again (Issue #2) before the 08 checks ran. 09 was verified first so the upgrade install over the 08 vault could be checked before the `pm clear` that 4b needs.
+
+| # | Acceptance criterion | Result |
+|---|---|---|
+| 3 | Cold-start splash, light + dark, no white flash | NOT RUN (Issue #2) |
+| 4b | Setup welcome "Welcome to Vaultly" + warning | NOT RUN (Issue #2) |
+
+### Issues found
+2. **Blocker for verification (environment, not app):** the emulator froze during the 09 run. Repro: a stray key/tap left the app and opened Google Lens, which asked for camera permission (VirtualScene camera starting). After that, every `adb shell` call timed out for more than 3 minutes, `qemu-system-aarch64` (PID 34709) stayed at 0 % CPU, and `adb devices` still listed `emulator-5554 device`. The emulator was not restarted. **The APK on the device is the 09 screenshot build (FLAG_SECURE off).** Run `./gradlew installDebug` once it responds.
