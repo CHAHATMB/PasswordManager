@@ -52,4 +52,5 @@ private fun LockError.message(): String = when (this) {
     LockError.PasswordMismatch -> "Passwords do not match"
     LockError.WrongPassword -> "Wrong master password"
     LockError.CorruptVault -> "Vault data is corrupted and cannot be opened"
+    LockError.Unexpected -> "Something went wrong. Please try again."
 }

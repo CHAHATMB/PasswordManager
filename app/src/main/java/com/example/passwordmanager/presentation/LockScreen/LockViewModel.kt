@@ -11,12 +11,13 @@ import com.example.passwordmanager.data.vault.VaultSession
 import com.example.passwordmanager.data.vault.VaultState
 import com.example.passwordmanager.presentation.MasterPasswordError
 import com.example.passwordmanager.presentation.validateMasterPassword
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-enum class LockError { PasswordTooShort, PasswordMismatch, WrongPassword, CorruptVault }
+enum class LockError { PasswordTooShort, PasswordMismatch, WrongPassword, CorruptVault, Unexpected }
 
 data class LockState(val isWorking: Boolean = false, val error: LockError? = null)
 
@@ -49,6 +50,11 @@ class LockViewModel(private val session: VaultSession) : ViewModel() {
                 _state.value = LockState(error = LockError.WrongPassword)
             } catch (e: VaultException.CorruptHeader) {
                 _state.value = LockState(error = LockError.CorruptVault)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                // SQLCipher, I/O or native KDF failures: show an error instead of crashing.
+                _state.value = LockState(error = LockError.Unexpected)
             } finally {
                 passwordChars.fill('\u0000')
             }
