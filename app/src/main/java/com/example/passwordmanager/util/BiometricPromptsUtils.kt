@@ -30,7 +30,7 @@ object BiometricPromptUtils {
     }
 
     fun unlockPromptInfo(): BiometricPrompt.PromptInfo =
-        promptInfo(title = "Unlock vault", negativeButton = "Use master password")
+        promptInfo(title = "Unlock Vaultly", negativeButton = "Use master password")
 
     fun enablePromptInfo(): BiometricPrompt.PromptInfo =
         promptInfo(title = "Turn on fingerprint unlock", negativeButton = "Cancel")

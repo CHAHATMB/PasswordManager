@@ -3,7 +3,7 @@ package com.example.passwordmanager.presentation.SettingsScreen
 import android.net.Uri
 import com.example.passwordmanager.data.backup.ImportResult
 
-const val BACKUP_FILE_NAME = "passwords-export.json"
+const val BACKUP_FILE_NAME = "vaultly-backup.json"
 const val BACKUP_MIME_TYPE = "application/json"
 // Any type: files pushed or downloaded often carry a generic MIME type, and a wrong pick gets a clear error.
 val IMPORT_MIME_TYPES = arrayOf("*/*")

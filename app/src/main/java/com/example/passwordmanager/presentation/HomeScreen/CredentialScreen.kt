@@ -63,7 +63,7 @@ fun CredentialScreen(
         topBar = {
             Column {
                 AppTopBar(
-                    title = "Password Manager",
+                    title = "Vaultly",
                     actions = {
                         IconButton(onClick = { onEvent(CredentialEvent.SortCredential) }) {
                             Icon(imageVector = Icons.AutoMirrored.Rounded.Sort, contentDescription = "Sort by date or website")

@@ -85,7 +85,7 @@ class SecureClipboard(
     }
 
     companion object {
-        const val CLIP_LABEL = "Password Manager"
+        const val CLIP_LABEL = "Vaultly"
         const val CLEAR_DELAY_MILLIS = 30_000L
 
         // An unreadable clipboard counts as ours: in the background Android hides the clip, and

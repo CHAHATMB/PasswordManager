@@ -183,7 +183,7 @@ private fun BackupError.message(): String = when (this) {
     BackupError.PasswordMismatch -> "The passwords don't match."
     BackupError.WrongBackupPassword -> "Wrong export password, or the file was modified."
     BackupError.FileTooLarge -> "The file is larger than $MAX_IMPORT_FILE_MEGABYTES MB."
-    BackupError.NotABackup -> "This is not a Password Manager backup file."
+    BackupError.NotABackup -> "This is not a Vaultly backup file."
     BackupError.UnsupportedVersion -> "This backup was made by a newer version of the app."
     BackupError.DamagedBackup -> "This backup file is damaged."
     BackupError.NotText -> "This is not a CSV file: it is not UTF-8 text."
