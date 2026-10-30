@@ -1,6 +1,6 @@
 # Design system and modern UI
 
-Status: IN_REVIEW
+Status: DONE
 Backlog ID: 07
 
 ## Goal
