@@ -18,13 +18,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.SecureFlagPolicy
 import com.example.passwordmanager.data.backup.MAX_IMPORT_FILE_MEGABYTES
 import com.example.passwordmanager.presentation.MIN_MASTER_PASSWORD_LENGTH
+import com.example.passwordmanager.presentation.components.ConfirmDialog
 import com.example.passwordmanager.presentation.components.PasswordTextField
+import com.example.passwordmanager.presentation.components.SectionHeader
+import com.example.passwordmanager.ui.theme.Spacing
 
 private val secureDialog = DialogProperties(securePolicy = SecureFlagPolicy.SecureOn)
 
@@ -32,7 +33,7 @@ private val secureDialog = DialogProperties(securePolicy = SecureFlagPolicy.Secu
 @Composable
 fun BackupSection(dialog: BackupDialog?, onEvent: (BackupEvent) -> Unit, onPick: (BackupPicker) -> Unit) {
 
-    Text(text = "Backup", fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onBackground)
+    SectionHeader(text = "Backup")
     OutlinedButton(onClick = { onEvent(BackupEvent.StartExport) }, modifier = Modifier.fillMaxWidth()) {
         Text(text = "Export encrypted backup")
     }
@@ -78,23 +79,16 @@ fun BackupSection(dialog: BackupDialog?, onEvent: (BackupEvent) -> Unit, onPick:
             onConfirm = { password, _ -> onEvent(BackupEvent.ImportBackup(password)) },
             onDismiss = dismiss
         )
-        BackupDialog.CsvWarning -> AlertDialog(
-            onDismissRequest = dismiss,
-            properties = secureDialog,
-            title = { Text(text = "Import from CSV") },
-            text = {
-                Text(
-                    text = "A CSV export is a plaintext file: anyone who can open it can read every " +
-                        "password in it. Delete the file from your device after the import."
-                )
+        BackupDialog.CsvWarning -> ConfirmDialog(
+            title = "Import from CSV",
+            message = "A CSV export is a plaintext file: anyone who can open it can read every " +
+                "password in it. Delete the file from your device after the import.",
+            confirmLabel = "Choose file",
+            onConfirm = {
+                dismiss()
+                onPick(BackupPicker.OpenCsv)
             },
-            confirmButton = {
-                TextButton(onClick = {
-                    dismiss()
-                    onPick(BackupPicker.OpenCsv)
-                }) { Text(text = "Choose file") }
-            },
-            dismissButton = { TextButton(onClick = dismiss) { Text(text = "Cancel") } }
+            onDismiss = dismiss
         )
         BackupDialog.Working -> AlertDialog(
             onDismissRequest = {},
@@ -105,7 +99,7 @@ fun BackupSection(dialog: BackupDialog?, onEvent: (BackupEvent) -> Unit, onPick:
             ),
             confirmButton = {},
             text = {
-                Row(horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                Row(horizontalArrangement = Arrangement.spacedBy(Spacing.l), verticalAlignment = Alignment.CenterVertically) {
                     CircularProgressIndicator()
                     Text(text = "Working…")
                 }
@@ -144,7 +138,7 @@ private fun PasswordDialog(
         properties = secureDialog,
         title = { Text(text = title) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
                 Text(text = message)
                 PasswordTextField(
                     value = password,

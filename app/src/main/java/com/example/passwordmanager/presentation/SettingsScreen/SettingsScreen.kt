@@ -1,6 +1,5 @@
 package com.example.passwordmanager.presentation.SettingsScreen
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -19,10 +18,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.example.passwordmanager.data.settings.AutoLockTimeout
+import com.example.passwordmanager.presentation.components.AppTopBar
+import com.example.passwordmanager.presentation.components.SectionHeader
+import com.example.passwordmanager.ui.theme.Spacing
 
 @Composable
 fun SettingsScreen(
@@ -33,59 +32,58 @@ fun SettingsScreen(
     onBackupEvent: (BackupEvent) -> Unit,
     onPickBackupFile: (BackupPicker) -> Unit
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-            .verticalScroll(rememberScrollState())
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        Text(
-            text = "Settings",
-            fontSize = 22.sp,
-            fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.primary
-        )
-        Text(text = "Auto-lock", fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onBackground)
-        Column(modifier = Modifier.selectableGroup()) {
-            AutoLockTimeout.entries.forEach { timeout ->
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .selectable(
-                            selected = timeout == state.autoLockTimeout,
-                            onClick = { onAutoLockTimeoutChange(timeout) },
-                            role = Role.RadioButton
+    Column(modifier = Modifier.fillMaxSize()) {
+        AppTopBar(title = "Settings")
+        Column(
+            modifier = Modifier
+                .verticalScroll(rememberScrollState())
+                .padding(start = Spacing.l, end = Spacing.l, bottom = Spacing.l),
+            verticalArrangement = Arrangement.spacedBy(Spacing.s)
+        ) {
+            SectionHeader(text = "Auto-lock")
+            Column(modifier = Modifier.selectableGroup()) {
+                AutoLockTimeout.entries.forEach { timeout ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .selectable(
+                                selected = timeout == state.autoLockTimeout,
+                                onClick = { onAutoLockTimeoutChange(timeout) },
+                                role = Role.RadioButton
+                            )
+                            .padding(vertical = Spacing.xs),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(selected = timeout == state.autoLockTimeout, onClick = null)
+                        Text(
+                            text = timeout.label(),
+                            modifier = Modifier.padding(start = Spacing.m),
+                            style = MaterialTheme.typography.bodyLarge
                         )
-                        .padding(vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    RadioButton(selected = timeout == state.autoLockTimeout, onClick = null)
+                    }
+                }
+            }
+            // Also shown while enabled, so biometrics can be turned off after the last fingerprint is removed.
+            if (isBiometricAvailable || state.isBiometricEnabled) {
+                SectionHeader(text = "Biometrics")
+                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        text = timeout.label(),
-                        modifier = Modifier.padding(start = 12.dp),
-                        color = MaterialTheme.colorScheme.onBackground
+                        text = "Fingerprint unlock",
+                        modifier = Modifier.weight(1f),
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                    Switch(checked = state.isBiometricEnabled, onCheckedChange = onBiometricToggle)
+                }
+                if (state.isBiometricError) {
+                    Text(
+                        text = "Couldn't turn on fingerprint unlock. Please try again.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.error
                     )
                 }
             }
+            BackupSection(dialog = state.backupDialog, onEvent = onBackupEvent, onPick = onPickBackupFile)
         }
-        // Also shown while enabled, so biometrics can be turned off after the last fingerprint is removed.
-        if (isBiometricAvailable || state.isBiometricEnabled) {
-            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = "Fingerprint unlock",
-                    modifier = Modifier.weight(1f),
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onBackground
-                )
-                Switch(checked = state.isBiometricEnabled, onCheckedChange = onBiometricToggle)
-            }
-            if (state.isBiometricError) {
-                Text(text = "Couldn't turn on fingerprint unlock. Please try again.", color = MaterialTheme.colorScheme.error)
-            }
-        }
-        BackupSection(dialog = state.backupDialog, onEvent = onBackupEvent, onPick = onPickBackupFile)
     }
 }
 
