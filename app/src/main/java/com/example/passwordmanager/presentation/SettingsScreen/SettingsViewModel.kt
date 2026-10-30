@@ -186,7 +186,8 @@ class SettingsViewModel(
                 // Native KDF, SQLCipher or provider failures: show an error instead of crashing.
                 BackupDialog.Failed(BackupError.Unexpected)
             }
-            showBackupDialog(next)
+            // A lock while this ran already dismissed everything; don't bring a step back after it.
+            if (session.state.value is VaultState.Unlocked) showBackupDialog(next) else onBackupEvent(BackupEvent.Dismiss)
         }
     }
 
