@@ -37,12 +37,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.SecureFlagPolicy
 import com.example.passwordmanager.presentation.components.AppTextField
 import com.example.passwordmanager.presentation.components.ConfirmDialog
+import com.example.passwordmanager.presentation.components.PasswordTextField
 import com.example.passwordmanager.presentation.isTotpEditValid
 import com.example.passwordmanager.ui.theme.Spacing
 import com.example.passwordmanager.util.totp.TOTP_DIGITS
@@ -212,17 +212,11 @@ private fun ManualEntrySheet(draft: TotpDraft, onEvent: (AuthenticatorEvent) -> 
                     modifier = Modifier.fillMaxWidth(),
                     error = if (showErrors) draft.accountNameError else null
                 )
-                AppTextField(
+                PasswordTextField(
                     value = draft.secret,
                     onValueChange = { change(draft.copy(secret = it)) },
                     label = "Setup key",
                     modifier = Modifier.fillMaxWidth(),
-                    // Password type keeps the key out of keyboard suggestions and learning.
-                    keyboardOptions = KeyboardOptions(
-                        capitalization = KeyboardCapitalization.Characters,
-                        autoCorrect = false,
-                        keyboardType = KeyboardType.Password
-                    ),
                     error = if (showErrors) draft.secretError else null
                 )
                 TextButton(onClick = { change(draft.copy(isAdvancedOpen = !draft.isAdvancedOpen)) }) {

@@ -25,6 +25,7 @@ fun PasswordTextField(
     label: String,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
+    error: String? = null,
     onGenerate: (() -> Unit)? = null
 ) {
     var isRevealed by remember { mutableStateOf(false) }
@@ -36,6 +37,7 @@ fun PasswordTextField(
         enabled = enabled,
         visualTransformation = if (isRevealed) VisualTransformation.None else PasswordVisualTransformation(),
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, autoCorrect = false),
+        error = error,
         trailingIcon = {
             Row {
                 if (onGenerate != null) {
