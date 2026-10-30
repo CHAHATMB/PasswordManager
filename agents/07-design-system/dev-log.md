@@ -53,3 +53,19 @@
   - d760e7e fix: show the empty states only after the list has loaded
   - 61f9c85 fix: resolve the theme mode in MainActivity so ui/theme has no data dependency
 - Build/test result: `./gradlew assembleDebug testDebugUnitTest` → PASS (135 tests, 0 failures).
+
+## Follow-up fix (post-verify)
+- Verify Issue #2: a system night-mode change recreated the Activity and closed the add sheet / generator sheet, losing the input.
+- Commit: 91bbdca fix: keep the add sheet and its input across a configuration change
+- Changes:
+  - `CredentialDraft` (`presentation/CredentialState.kt`): website, username, password, note, `isGeneratorOpen`.
+  - `CredentialViewModel.addDraft` (null = sheet closed), driven by `OpenAddSheet` / `ChangeAddDraft` / `CloseAddSheet`; cleared on lock together with the Undo channel. Compose `mutableStateOf`, not a StateFlow, because the text fields read it directly. Not in saved state, so no plaintext in the Bundle.
+  - `MainActivity`: the sheet is shown while `addDraft != null` (replaces `isSheetOpen`).
+  - `AddCredentialScreen`: a stateless overload takes `draft` + `onDraftChange`. The old signature keeps the input in local `remember` and is still used by Edit (and the unused `Add` route).
+  - `GeneratorSheet`: `rememberUpdatedState(onDismiss)`. Without it, "Use" closed the sheet with the old `onDismiss` and the stale draft overwrote the generated password.
+- Not changed:
+  - Edit screen: the route survives (nav state is saved), but typed edits go back to the stored values. Keeping them would need storage scoped to the back-stack entry that is also cleared on lock. Not a trivial fix.
+  - Backup dialogs already survive (`SettingsViewModel.backupDialog`). Only the typed password is lost, on purpose.
+  - Generator options reset and the preview is regenerated after recreation. The open state and the form input are kept.
+- Tests: `CredentialViewModelTest` covers open → change → close, a change after close not reopening the sheet, and lock clearing the draft.
+- Build/test: `./gradlew assembleDebug testDebugUnitTest` → PASS (138 tests, 0 failures). Not tested on the emulator.
