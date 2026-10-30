@@ -66,7 +66,7 @@ class LockViewModelTest {
     fun shortPasswordMapsToPasswordTooShort() {
         val viewModel = newViewModel(newSession())
 
-        viewModel.setup("short", "short")
+        viewModel.setup("short", "short", enableBiometric = false)
 
         assertEquals(LockState(error = LockError.PasswordTooShort), viewModel.state.value)
     }
@@ -75,7 +75,7 @@ class LockViewModelTest {
     fun mismatchedConfirmationMapsToPasswordMismatch() {
         val viewModel = newViewModel(newSession())
 
-        viewModel.setup(password, password + "x")
+        viewModel.setup(password, password + "x", enableBiometric = false)
 
         assertEquals(LockState(error = LockError.PasswordMismatch), viewModel.state.value)
     }
@@ -95,10 +95,11 @@ class LockViewModelTest {
     fun databaseFailureMapsToUnexpected() = runTest {
         val viewModel = newViewModel(newSession(openDatabase = { throw SQLiteException("file is not a database") }))
 
-        viewModel.setup(password, password)
+        viewModel.setup(password, password, enableBiometric = true)
 
         assertEquals(LockState(error = LockError.Unexpected), viewModel.state.first { !it.isWorking })
         assertEquals(VaultState.NotSetUp, viewModel.vaultState.value)
+        assertFalse("a failed setup asks for no prompt", viewModel.takeBiometricEnrolmentRequest())
     }
 
     @Test
@@ -160,6 +161,56 @@ class LockViewModelTest {
         viewModel.unlock(password)
         assertTrue(viewModel.state.first { !it.isWorking }.error == null)
         assertTrue(viewModel.vaultState.value is VaultState.Unlocked)
+    }
+
+    @Test
+    fun setupWithBiometricAsksForEnrolmentOnce() = runTest {
+        val viewModel = newViewModel(newSession())
+
+        viewModel.setup(password, password, enableBiometric = true)
+
+        assertNull(viewModel.state.first { !it.isWorking }.error)
+        assertTrue(viewModel.vaultState.value is VaultState.Unlocked)
+        assertTrue("first take after setup", viewModel.takeBiometricEnrolmentRequest())
+        assertFalse("second take", viewModel.takeBiometricEnrolmentRequest())
+    }
+
+    @Test
+    fun setupWithoutBiometricAsksForNoEnrolment() = runTest {
+        val viewModel = newViewModel(newSession())
+
+        viewModel.setup(password, password, enableBiometric = false)
+
+        assertNull(viewModel.state.first { !it.isWorking }.error)
+        assertTrue(viewModel.vaultState.value is VaultState.Unlocked)
+        assertFalse(viewModel.takeBiometricEnrolmentRequest())
+    }
+
+    @Test
+    fun invalidSetupAsksForNoEnrolmentUntilASuccessfulOne() = runTest {
+        val viewModel = newViewModel(newSession())
+
+        viewModel.setup("short", "short", enableBiometric = true)
+        assertFalse("too short", viewModel.takeBiometricEnrolmentRequest())
+        viewModel.setup(password, password + "x", enableBiometric = true)
+        assertFalse("mismatch", viewModel.takeBiometricEnrolmentRequest())
+
+        viewModel.setup(password, password, enableBiometric = true)
+
+        assertNull(viewModel.state.first { !it.isWorking }.error)
+        assertTrue("after the fixed setup", viewModel.takeBiometricEnrolmentRequest())
+    }
+
+    @Test
+    fun lockClearsAPendingEnrolment() = runTest {
+        val viewModel = newViewModel(newSession())
+        viewModel.setup(password, password, enableBiometric = true)
+        viewModel.state.first { !it.isWorking }
+
+        viewModel.lock()
+
+        assertEquals(VaultState.Locked, viewModel.vaultState.value)
+        assertFalse(viewModel.takeBiometricEnrolmentRequest())
     }
 
     private fun newViewModel(
