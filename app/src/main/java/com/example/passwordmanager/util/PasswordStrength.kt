@@ -17,8 +17,9 @@ enum class PasswordStrength {
     Weak, Fair, Good, Strong;
 
     companion object {
-        fun of(password: String): PasswordStrength {
-            val bits = entropyBits(password)
+        fun of(password: String): PasswordStrength = fromBits(entropyBits(password))
+
+        fun fromBits(bits: Double): PasswordStrength {
             return when {
                 bits < FAIR_BITS -> Weak
                 bits < GOOD_BITS -> Fair
