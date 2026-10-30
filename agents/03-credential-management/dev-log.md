@@ -86,5 +86,23 @@
     15. `adb logcat` during 4–13: no `gh-secret`, `gl-secret`, `ex-secret`, `correcthorse` or clipboard contents.
 
 ## Round 2 (fixes from review/verify)
-- Addressed findings:
-- Commits:
+- Addressed findings (review.md Round 1):
+  - #1: `LockScreenLayout` puts the scrolling Column in a `BoxWithConstraints` with `heightIn(min = maxHeight)`, so Setup and Unlock are centred again and still scroll above the keyboard.
+  - #2 (stray Undo): `CredentialViewModel` takes `vaultSession.state` and drains the `deletedCredentials` channel on any non-Unlocked state, so a delete buffered at lock time never offers Undo after unlock.
+  - #2 (double delete): the Detail Back/Delete handlers act only while their back stack entry is still current (`currentBackStackEntry?.id == entry.id`). The second tap is ignored, so one delete and one Snackbar. Delete now pops first, then sends the event.
+  - #4: the `turnOffBiometric` comment now says the next biometric attempt retries the disable.
+  - #6: removed `assertFalse(original.isFav)` and `assertNotEquals(original, toggled)`; renamed to `favouriteToggleUpdatesTheFavouritesQuery`.
+  - Not changed, per the coordinator: #5 (`var`/`val` mix in old events), #3 (clipboard process death), #7 (history).
+- Known limitation (#3): the 30 s clear timer lives in the process. If the process dies before it fires, the password stays on the clipboard (the system clears it after about an hour on API 33+; indefinitely below 33). A WorkManager/AlarmManager fallback would close this.
+- Commits (`a52b79a..HEAD`):
+  - fbc1887 fix: centre the Setup and Unlock content again while it scrolls
+  - 15c73d4 fix: correct when a failed biometric disable is retried
+  - c30ccb6 fix: drop a pending Undo when the vault locks
+  - f19c6a8 fix: ignore a second Delete tap on the detail screen
+  - 6f20ee0 fix: drop trivial assertions from the favourite toggle test
+  - plus this `docs:` commit
+- Tests: 81, 0 failures (no new tests; the two changes are UI/navigation and channel wiring).
+- Build/test result: `./gradlew assembleDebug testDebugUnitTest` → PASS. Each commit compiled before committing.
+- Verifier additions to the Round 1 flow:
+  - Step 1: Setup and Unlock content is vertically centred with the keyboard closed.
+  - Step 11: on Detail, double-tap Delete quickly → one Snackbar, Home stays visible. Delete a row and tap Lock right away → unlock → no Undo Snackbar.
