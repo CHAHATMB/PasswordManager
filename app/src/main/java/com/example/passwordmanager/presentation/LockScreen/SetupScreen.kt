@@ -29,7 +29,8 @@ fun SetupScreen(
             text = "Use at least $MIN_MASTER_PASSWORD_LENGTH characters. Your master password cannot be " +
                 "recovered: if you forget it, your saved passwords are lost.",
             textAlign = TextAlign.Center,
-            color = MaterialTheme.colorScheme.onBackground
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         PasswordTextField(
             value = password,
@@ -56,6 +57,7 @@ fun SetupScreen(
             enabled = !state.isWorking
         )
         Button(
+            modifier = Modifier.fillMaxWidth(),
             enabled = !state.isWorking,
             // Not cleared here: a failed setup keeps the fields, and success leaves this screen.
             onClick = { onSetup(password, confirmation) }

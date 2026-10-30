@@ -34,6 +34,7 @@ fun UnlockScreen(
             )
         }
         Button(
+            modifier = Modifier.fillMaxWidth(),
             enabled = !state.isWorking && password.isNotEmpty() && state.retryInSeconds == 0,
             onClick = {
                 onUnlock(password)

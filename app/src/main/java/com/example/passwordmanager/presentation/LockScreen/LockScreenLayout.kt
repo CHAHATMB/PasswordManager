@@ -9,18 +9,22 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Shield
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.example.passwordmanager.presentation.MIN_MASTER_PASSWORD_LENGTH
+import com.example.passwordmanager.ui.theme.Spacing
 
 @Composable
 fun LockScreenLayout(
@@ -39,19 +43,24 @@ fun LockScreenLayout(
                 .verticalScroll(rememberScrollState())
                 .fillMaxWidth()
                 .heightIn(min = maxHeight)
-                .padding(24.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
+                .padding(Spacing.xl),
+            verticalArrangement = Arrangement.spacedBy(Spacing.l, Alignment.CenterVertically),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            Icon(
+                imageVector = Icons.Rounded.Shield,
+                contentDescription = null,
+                modifier = Modifier.size(64.dp),
+                tint = MaterialTheme.colorScheme.primary
+            )
             Text(
                 text = title,
-                fontSize = 22.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.primary
+                style = MaterialTheme.typography.headlineSmall,
+                color = MaterialTheme.colorScheme.onBackground
             )
             content()
             state.error?.let {
-                Text(text = it.message(), color = MaterialTheme.colorScheme.error)
+                Text(text = it.message(), color = MaterialTheme.colorScheme.error, textAlign = TextAlign.Center)
             }
             if (state.isWorking) {
                 CircularProgressIndicator()
