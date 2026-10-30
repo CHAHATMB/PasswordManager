@@ -91,5 +91,38 @@
     14. `adb logcat` during steps 2–11: no master password, credential passwords, keys, IVs or Base64 blobs. In the release build, expect no app `Log` output at all.
 
 ## Round 2 (fixes from review/verify)
-- Addressed findings:
-- Commits:
+- Addressed findings (review.md Round 1, plus the orchestrator's backoff decision):
+  - #1 (major): `takeBiometricUnlockCipher()` now also catches `GeneralSecurityException` and `ProviderException` (`KeyPermanentlyInvalidatedException` is still caught first). The fallback disables biometrics and shows `LockError.BiometricFailed`: "Fingerprint unlock stopped working and was turned off. Use your master password." The existing countdown is kept, because it uses `update`/`copy`.
+    - `VaultSession.disableBiometric()` removes the header blob *before* deleting the key.
+    - `BiometricKeyStore.deleteKey()` is best effort: it swallows `GeneralSecurityException`/`IOException`, so a broken Keystore can't crash the disable path either. No crash loop: the next launch finds no blob and shows no prompt.
+  - Orchestrator decision (also review #5): `UnlockThrottle` persists `failed_attempts` and `last_failure_at` (wall clock) in private prefs `unlock_throttle`. It writes with `commit()` so a kill right after a failure keeps the count, and it is cleared on success.
+    - `remainingMillis = clamp(delay(n) − (now − lastFailure), 0, delay(n))`. A clock set backwards restarts the full delay from now, which is the "max(lastFailure, now)" intent, instead of extending it.
+    - Accepted gap: setting the clock *forward* skips the wait. Argon2 remains the real cost. The brief's "in memory" is superseded.
+    - `LockViewModel` sets `retryInSeconds` together with the WrongPassword error, so the UI and tests never see the error without the countdown.
+  - #2: `loadBiometric()` decodes under its own try, so bad biometric Base64 means "biometrics off" and the master password still works.
+  - #3: `VaultSession` counts `lock()` calls (`AtomicInteger`). Setup, unlock and biometric unlock record the count at start, and `openVault` calls `lock()` right after publishing `Unlocked` if it changed. `lock()` uses `compareAndSet`, because it can now run from `openVault` and the main thread at once.
+  - #4: the repository writes throw the specific `VaultException.Locked` when locked, or when an `IllegalStateException`/`SQLException` comes from a DB the session has meanwhile locked. Other errors are rethrown unchanged. `CredentialViewModel` routes all writes through `write {}`, which drops `VaultException.Locked` quietly.
+    - Finding: after `close()`, Room silently *reopens* through the open helper. With SQLCipher, that reopen uses the zeroed raw key and fails with `android.database.sqlite.SQLiteException` (SQLCipher has no subclass of its own), which maps to Locked.
+    - Plain Room in JVM tests just reopens and writes, so the mid-write path has no unit test. Only "write after lock → `VaultException.Locked`" is tested.
+  - #6: removed `oneMinuteStaysUnlockedAfterThirtySecondsAndLocksAfterSixty`.
+  - #7: every Round 2 commit compiles with its tests (checked with `git archive` exports).
+- Commits (`7023304..HEAD`):
+  - 7aebe48 fix: turn biometrics off on any Keystore failure instead of crashing
+  - 0114aee fix: persist the wrong-password delay across app restarts
+  - aff0bf6 fix: treat garbled biometric header fields as biometrics off
+  - d1bbb38 fix: lock again when a lock arrives during an in-flight unlock
+  - e492c5a fix: drop credential writes cut off by a vault lock instead of crashing
+  - 3a86f6b test: drop the redundant one-minute auto-lock case
+  - plus the `docs:` commit for this log
+- Tests: 66 total, 0 failures (+7, −1):
+  - `LockViewModelTest`:
+    - Keystore failure: relies on Robolectric having no `AndroidKeyStore`, and asserts that precondition. Biometrics end up off, a relaunch shows no prompt, and the password unlocks.
+    - Backoff gate: three wrong passwords give 5 s; the 4th call is ignored; a new ViewModel keeps the block; after 5 s the password unlocks and the count resets.
+  - `UnlockThrottleTest` (+3, now Robolectric): the gate opens only after the delay and survives a new instance; a clock set back gives the full delay; success resets the count.
+  - `VaultHeaderStoreTest` (+1): garbled biometric Base64 loads as disabled.
+  - `VaultSessionTest` (+1, 1 strengthened): a lock during unlock locks again with the DB closed and the key zeroed; an earlier lock doesn't undo a later unlock.
+  - `CredentialRepositoryTest`: the locked write now expects `VaultException.Locked`.
+- Build/test result: `./gradlew assembleDebug testDebugUnitTest` → PASS. `assembleRelease` → PASS, with no R8 warnings.
+- Verifier additions to the Round 1 flow:
+  - Step 11: force-stop during a countdown and relaunch → the remaining delay continues. Force-stop after 3 failures, wait 5 s, relaunch → Unlock is enabled.
+  - Clock check: after 3 failures, set the device clock back 1 h → the wait is at most 5 s.
