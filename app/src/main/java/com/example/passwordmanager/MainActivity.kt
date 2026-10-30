@@ -32,10 +32,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.window.SecureFlagPolicy
@@ -177,9 +175,7 @@ class MainActivity : FragmentActivity() {
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     private fun VaultShell() {
-        var isSheetOpen by remember {
-            mutableStateOf(false)
-        }
+        val addDraft = viewModel.addDraft
         val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
         val scope = rememberCoroutineScope()
 
@@ -234,25 +230,27 @@ class MainActivity : FragmentActivity() {
                 }
             },
             floatingActionButton = {
-                if (isFabVisible) FloatingActionButton(onClick = { isSheetOpen = true }) {
+                if (isFabVisible) FloatingActionButton(onClick = { viewModel.onEvent(CredentialEvent.OpenAddSheet) }) {
                     Icon(Icons.Filled.Add, contentDescription = "Add")
                 }
             },
         ) {
 
-            if( isSheetOpen )
+            if( addDraft != null )
                 ModalBottomSheet(
                 sheetState = sheetState,
                 onDismissRequest = {
-                    isSheetOpen = false
+                    viewModel.onEvent(CredentialEvent.CloseAddSheet)
                 },
                 properties = ModalBottomSheetDefaults.properties(securePolicy = SecureFlagPolicy.SecureOn),
 
             ){
                 AddCredentialScreen(
+                    draft = addDraft,
+                    onDraftChange = { viewModel.onEvent(CredentialEvent.ChangeAddDraft(it)) },
                     onEvent = viewModel::onEvent,
                     onSaved = {
-                        scope.launch { sheetState.hide() }.invokeOnCompletion { isSheetOpen = false }
+                        scope.launch { sheetState.hide() }.invokeOnCompletion { viewModel.onEvent(CredentialEvent.CloseAddSheet) }
                     }
                 )
             }

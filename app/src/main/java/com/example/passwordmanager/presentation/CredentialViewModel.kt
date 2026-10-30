@@ -1,5 +1,8 @@
 package com.example.passwordmanager.presentation
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
 import androidx.lifecycle.viewModelScope
@@ -51,11 +54,21 @@ class CredentialViewModel(
     /** Each credential right after it is deleted, so the UI can offer Undo. */
     val deletedCredentials = _deletedCredentials.receiveAsFlow()
 
+    /**
+     * The open add sheet's input, or null while it is closed. Held here rather than in saved state so it
+     * survives a configuration change without the password going into the Bundle. Compose state instead of
+     * a StateFlow: a text field fed through an asynchronous flow can lose keystrokes.
+     */
+    var addDraft by mutableStateOf<CredentialDraft?>(null)
+        private set
+
     init {
-        // A delete still buffered at lock time must not offer Undo after the next unlock.
+        // A delete still buffered at lock time must not offer Undo after the next unlock,
+        // and a half-typed credential must not outlive the session.
         viewModelScope.launch {
             vaultState.collect { state ->
                 if (state !is VaultState.Unlocked) {
+                    addDraft = null
                     while (_deletedCredentials.tryReceive().isSuccess) Unit
                 }
             }
@@ -105,6 +118,11 @@ class CredentialViewModel(
             is CredentialEvent.OnSearchTextChange -> {
                 _searchText.value = event.text
             }
+
+            is CredentialEvent.OpenAddSheet -> addDraft = CredentialDraft()
+            // Ignored once closed, so a late change can't reopen the sheet.
+            is CredentialEvent.ChangeAddDraft -> if (addDraft != null) addDraft = event.draft
+            is CredentialEvent.CloseAddSheet -> addDraft = null
         }
     }
 

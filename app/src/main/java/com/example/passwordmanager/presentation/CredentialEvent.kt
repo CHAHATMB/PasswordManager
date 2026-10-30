@@ -24,4 +24,8 @@ sealed interface CredentialEvent {
     data class CopyPassword(val credential: Credential): CredentialEvent
 
     data class OnSearchTextChange(val text: String): CredentialEvent
+
+    object OpenAddSheet: CredentialEvent
+    data class ChangeAddDraft(val draft: CredentialDraft): CredentialEvent
+    object CloseAddSheet: CredentialEvent
 }

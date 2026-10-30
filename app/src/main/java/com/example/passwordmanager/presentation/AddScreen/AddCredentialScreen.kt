@@ -19,6 +19,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import com.example.passwordmanager.data.Credential
+import com.example.passwordmanager.presentation.CredentialDraft
 import com.example.passwordmanager.presentation.CredentialEvent
 import com.example.passwordmanager.presentation.components.AppTextField
 import com.example.passwordmanager.presentation.components.AppTopBar
@@ -28,9 +29,23 @@ import com.example.passwordmanager.presentation.components.PasswordTextField
 import com.example.passwordmanager.presentation.isCredentialFormValid
 import com.example.passwordmanager.ui.theme.Spacing
 
+/** Adds a new credential, or edits [editing] in place when it is set. The input lives in local state. */
+@Composable
+fun AddCredentialScreen(
+    onEvent: (CredentialEvent)->Unit,
+    onSaved: () -> Unit,
+    editing: Credential? = null
+) {
+    // Plain remember (not saveable) so typed passwords never land in the saved-state Bundle.
+    var draft by remember { mutableStateOf(CredentialDraft(editing)) }
+    AddCredentialScreen(draft = draft, onDraftChange = { draft = it }, onEvent = onEvent, onSaved = onSaved, editing = editing)
+}
+
 /** Adds a new credential, or edits [editing] in place when it is set. */
 @Composable
 fun AddCredentialScreen(
+    draft: CredentialDraft,
+    onDraftChange: (CredentialDraft) -> Unit,
     onEvent: (CredentialEvent)->Unit,
     onSaved: () -> Unit,
     editing: Credential? = null
@@ -38,26 +53,26 @@ fun AddCredentialScreen(
     Scaffold (
         topBar = { AppTopBar(title = if (editing == null) "Add" else "Edit") }
     ){
-        TextFields(it, editing, onEvent, onSaved)
+        TextFields(it, draft, onDraftChange, editing, onEvent, onSaved)
     }
 }
 
 @Composable
 private fun TextFields(
     it: PaddingValues,
+    draft: CredentialDraft,
+    onDraftChange: (CredentialDraft) -> Unit,
     editing: Credential?,
     onEvent: (CredentialEvent) -> Unit,
     onSaved: () -> Unit,
 ) {
-    // Plain remember (not saveable) so typed passwords never land in the saved-state Bundle.
-    var website by remember { mutableStateOf(editing?.website.orEmpty()) }
-    var username by remember { mutableStateOf(editing?.username.orEmpty()) }
-    var password by remember { mutableStateOf(editing?.password.orEmpty()) }
-    var note by remember { mutableStateOf(editing?.note.orEmpty()) }
-    var isGeneratorOpen by remember { mutableStateOf(false) }
+    val (website, username, password, note) = draft
 
-    if (isGeneratorOpen) {
-        GeneratorSheet(onUse = { password = it }, onDismiss = { isGeneratorOpen = false })
+    if (draft.isGeneratorOpen) {
+        GeneratorSheet(
+            onUse = { onDraftChange(draft.copy(password = it)) },
+            onDismiss = { onDraftChange(draft.copy(isGeneratorOpen = false)) }
+        )
     }
 
     Column(
@@ -76,27 +91,27 @@ private fun TextFields(
         ) {
             AppTextField(
                 value = website,
-                onValueChange = { website = it },
+                onValueChange = { onDraftChange(draft.copy(website = it)) },
                 label = "Website",
                 modifier = Modifier.fillMaxWidth()
             )
             AppTextField(
                 value = username,
-                onValueChange = { username = it },
+                onValueChange = { onDraftChange(draft.copy(username = it)) },
                 label = "Username",
                 modifier = Modifier.fillMaxWidth()
             )
             PasswordTextField(
                 value = password,
-                onValueChange = { password = it },
+                onValueChange = { onDraftChange(draft.copy(password = it)) },
                 label = "Password",
                 modifier = Modifier.fillMaxWidth(),
-                onGenerate = { isGeneratorOpen = true }
+                onGenerate = { onDraftChange(draft.copy(isGeneratorOpen = true)) }
             )
             if (password.isNotEmpty()) PasswordStrengthIndicator(password = password)
             AppTextField(
                 value = note,
-                onValueChange = { note = it },
+                onValueChange = { onDraftChange(draft.copy(note = it)) },
                 label = "Note",
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = false

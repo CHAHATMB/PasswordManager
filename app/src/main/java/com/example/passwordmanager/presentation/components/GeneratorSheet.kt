@@ -23,6 +23,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -43,6 +44,8 @@ import kotlinx.coroutines.launch
 fun GeneratorSheet(onUse: (String) -> Unit, onDismiss: () -> Unit) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
+    // The hide animation outlives the click; by then onUse has recomposed the caller with a new onDismiss.
+    val currentOnDismiss by rememberUpdatedState(onDismiss)
     val generator = remember { PasswordGenerator(SecureRandom()) }
     var options by remember { mutableStateOf(GeneratorOptions()) }
     var preview by remember { mutableStateOf(generator.generate(options)) }
@@ -105,7 +108,7 @@ fun GeneratorSheet(onUse: (String) -> Unit, onDismiss: () -> Unit) {
                 }
                 Button(onClick = {
                     onUse(preview)
-                    scope.launch { sheetState.hide() }.invokeOnCompletion { onDismiss() }
+                    scope.launch { sheetState.hide() }.invokeOnCompletion { currentOnDismiss() }
                 }) {
                     Text(text = "Use")
                 }
