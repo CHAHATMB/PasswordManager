@@ -31,5 +31,5 @@
   - Two similar X icons appear in the search row when it has text (see decisions). Worth a look on a device.
 
 ## Round 2 (fixes from review/verify)
-- Addressed findings:
+- Addressed findings: review R1 #1, search row now closes with a leading back arrow instead of a trailing X (4651b03).
 - Commits:
