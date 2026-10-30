@@ -28,3 +28,32 @@ Notes (no action):
 - [x] Critical business logic has unit tests; no needless tests
 - [x] Commit messages follow convention and are concise
 - [x] Build + unit tests pass (`./gradlew assembleDebug testDebugUnitTest`, 95 tests, 0 failures)
+
+## Round 2
+- Commit range reviewed: e2fe459..0d2080e
+- Verdict: APPROVED
+
+### Findings
+| # | Severity (blocker/major/minor) | File:line | Issue | Suggested fix |
+|---|---|---|---|---|
+| 1 | minor | util/PasswordStrength.kt:46 | A block of 4 or more characters that repeats is no longer discounted, because the repeat window is 3. `qwerqwerqwer` → Fair (56 bits) and `Passw0rdPassw0rd` → Strong (83 bits). This trade-off comes from the window I suggested in Round 1. The estimator is advisory and has never been dictionary-aware. | No change for this feature. If it matters later, use a proper estimator (zxcvbn-style pattern matching) instead of growing the window. |
+
+Notes (no action):
+- Round 1 #1 is fixed:
+  - The repeat rule now looks back only `REPEAT_WINDOW` = 3 characters.
+  - The sequence rule now fires only on a ±1 run of 3 or more in the same direction.
+  - The fix is small and readable, and `index - 2` is reached only when `index > 1`.
+  - A Python mirror gives the same scores as the dev log: `abcdefgh` 9.4 bits and `aaaaaaaa` 4.7 bits (both Weak), `12341234` 13.3 bits (Weak), `password` 32.9 bits (Weak).
+  - Two-step pairs (`12`) no longer cost anything, so the penalties don't over-fire.
+- Round 1 #2: the `strength` overload is used by Setup. The `password` overload is still used by the Generator sheet and the Add screen, so there is no dead code.
+- Round 1 #3: the test uses `assertThrows` with the length in the message.
+- Tests are deterministic: they use fixed strings, plus the existing generator test with a seeded `SHA1PRNG`. The new cases cover the cases that should not over-fire (two-step pairs, 64 digits, 20 lowercase) as well as `aaaaaaaa`, `abababababab` and `abcdefgh`.
+- `correcthorse1` now scores Good. That is acceptable for an estimator with no dictionary, and the verifier steps are updated in the dev log.
+
+### Checklist
+- [x] Correctness / no obvious bugs
+- [x] Simple, no over-engineering, matches codebase style
+- [x] Security (no plaintext secrets, no logging of secrets, key handling)
+- [x] Critical business logic has unit tests; no needless tests
+- [x] Commit messages follow convention and are concise
+- [x] Unit tests pass (`./gradlew testDebugUnitTest`, 98 tests, 0 failures)
