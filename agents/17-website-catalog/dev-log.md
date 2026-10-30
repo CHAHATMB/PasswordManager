@@ -33,6 +33,9 @@
 - Gap: Yes Bank stays on `yesbank.in`. I could not confirm its `.bank.in` host: neither the old nor the candidate hosts responded, and search found no URL.
 - Build/test: `./gradlew assembleDebug testDebugUnitTest --tests '*WebsiteCatalog*'` → PASS
 
+## Round 2 fix (review round 2)
+- 0dc56e7 fix: use the yes.bank.in host for Yes Bank (`yesbank.in` 301-redirects there). `--tests '*WebsiteCatalog*'` → PASS
+
 ## Round 2 (fixes from review/verify)
 - Addressed findings:
 - Commits:
