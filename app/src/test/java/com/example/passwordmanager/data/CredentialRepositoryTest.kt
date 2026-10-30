@@ -15,6 +15,9 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Test
@@ -135,6 +138,67 @@ class CredentialRepositoryTest {
         } catch (e: Exception) {
             e
         }
+
+    @Test
+    fun editKeepsIdDateCreatedCountAndDatePosition() = runTest {
+        val repository = unlockedRepository()
+        listOf("alpha.com" to 1L, "beta.com" to 2L, "gamma.com" to 3L).forEach { (website, dateCreated) ->
+            repository.upsertCredential(credential(website).copy(dataCreate = dateCreated))
+        }
+        val before = repository.search("", sortByWebsite = false).first()
+        val original = before[1]
+
+        repository.upsertCredential(original.copy(username = "new-user", password = "new-secret"))
+
+        val after = repository.search("", sortByWebsite = false).first()
+        println("Before edit: ${before.map { it.id to it.username }}, after: ${after.map { it.id to it.username }}")
+        assertEquals(before.size, after.size)
+        assertEquals(before.map { it.id }, after.map { it.id })
+        val edited = after[1]
+        assertEquals(original.id, edited.id)
+        assertEquals(original.dataCreate, edited.dataCreate)
+        assertEquals("new-user", edited.username)
+        assertEquals("new-secret", edited.password)
+    }
+
+    @Test
+    fun restoreAfterDeleteReinsertsTheIdenticalRow() = runTest {
+        val repository = unlockedRepository()
+        repository.upsertCredential(credential("github.com").copy(note = "work account", isFav = true))
+        val deleted = repository.search("", sortByWebsite = false).first().single()
+
+        repository.deleteCredential(deleted)
+        assertNull(repository.getById(deleted.id).first())
+        repository.upsertCredential(deleted)
+
+        val restored = repository.getById(deleted.id).first()
+        println("Deleted: ${deleted.id}/${deleted.website}, restored: ${restored?.id}/${restored?.website}")
+        assertEquals(deleted, restored)
+    }
+
+    @Test
+    fun favouriteToggleLeavesTheOriginalUnchangedAndUpdatesFavourites() = runTest {
+        val repository = unlockedRepository()
+        repository.upsertCredential(credential("github.com"))
+        val original = repository.search("", sortByWebsite = false).first().single()
+
+        val toggled = original.copy(isFav = !original.isFav)
+        repository.upsertCredential(toggled)
+
+        println("Original isFav=${original.isFav}, toggled isFav=${toggled.isFav}")
+        assertFalse(original.isFav)
+        assertNotEquals(original, toggled)
+        assertEquals(listOf(original.id), repository.getFavorites(sortByWebsite = false).first().map { it.id })
+
+        repository.upsertCredential(toggled.copy(isFav = false))
+        assertTrue(repository.getFavorites(sortByWebsite = false).first().isEmpty())
+    }
+
+    private suspend fun unlockedRepository(): CredentialRepository {
+        val session = newSession()
+        session.setup(password.toCharArray())
+        return CredentialRepository(session)
+    }
 
     // File-backed so data written by one session is visible to the next, like a relaunch.
     private fun newSession() = VaultSession(
