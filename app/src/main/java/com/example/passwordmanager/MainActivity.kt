@@ -39,7 +39,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -55,6 +54,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.passwordmanager.data.vault.VaultState
@@ -145,12 +145,9 @@ class MainActivity : FragmentActivity() {
         val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
         val scope = rememberCoroutineScope()
 
-        var selectedItemIndex by rememberSaveable {
-            mutableStateOf(0)
-        }
-
         val state by viewModel.state.collectAsState()
         val navController = rememberNavController()
+        val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
         val snackbarHostState = remember { SnackbarHostState() }
         LaunchedEffect(Unit) {
             // collectLatest: a newer delete replaces the pending Undo instead of queueing behind it.
@@ -173,11 +170,11 @@ class MainActivity : FragmentActivity() {
                 MyBottomAppBarWithFab(
                     content = {
                         NavigationBar {
-                            listOf(NavigationItem.Home, NavigationItem.Favorite).forEachIndexed { index, item ->
+                            listOf(NavigationItem.Home, NavigationItem.Favorite).forEach { item ->
+                                val isSelected = currentRoute == item.route
                                 NavigationBarItem(
-                                    selected = selectedItemIndex == index,
+                                    selected = isSelected,
                                     onClick = {
-                                        selectedItemIndex = index
                                         navController.navigate(item.route){
                                             popUpTo(navController.graph.findStartDestination().id){
                                                 this@navigate.launchSingleTop = true
@@ -188,7 +185,7 @@ class MainActivity : FragmentActivity() {
                                         Text(text = item.title)
                                     },
                                     icon = {
-                                        if( selectedItemIndex == index ){
+                                        if( isSelected ){
                                             Icon(imageVector = item.selectedIcon, contentDescription=null)
                                         } else {
                                             Icon(imageVector = item.unSelectedIcon, contentDescription=null)
