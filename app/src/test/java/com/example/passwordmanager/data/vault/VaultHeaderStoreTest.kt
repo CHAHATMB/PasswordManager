@@ -54,6 +54,41 @@ class VaultHeaderStoreTest {
         assertArrayEquals(header.salt, loaded.salt)
         assertArrayEquals(header.iv, loaded.iv)
         assertArrayEquals(header.wrappedKey, loaded.wrappedKey)
+        assertNull("A header saved without biometrics must load without them", loaded.biometric)
+    }
+
+    @Test
+    fun biometricFieldsSurviveRoundTrip() {
+        val biometric = BiometricWrappedKey(iv = ByteArray(12) { (it + 7).toByte() }, wrappedKey = ByteArray(48) { it.toByte() })
+        store.save(header.withBiometric(biometric))
+
+        val loaded = VaultHeaderStore(prefs).load()!!
+
+        assertArrayEquals(biometric.iv, loaded.biometric!!.iv)
+        assertArrayEquals(biometric.wrappedKey, loaded.biometric!!.wrappedKey)
+        assertArrayEquals("Password-wrapped key must be untouched", header.wrappedKey, loaded.wrappedKey)
+    }
+
+    @Test
+    fun savingWithoutBiometricRemovesIt() {
+        store.save(header.withBiometric(BiometricWrappedKey(ByteArray(12), ByteArray(48))))
+
+        store.save(store.load()!!.withBiometric(null))
+
+        assertNull(store.load()!!.biometric)
+        assertFalse("bio_iv should be deleted from prefs", prefs.contains("bio_iv"))
+        assertFalse("wrapped_vk_bio should be deleted from prefs", prefs.contains("wrapped_vk_bio"))
+    }
+
+    @Test
+    fun incompleteBiometricBlobLoadsAsDisabled() {
+        store.save(header.withBiometric(BiometricWrappedKey(ByteArray(12), ByteArray(48))))
+        prefs.edit().remove("wrapped_vk_bio").commit()
+
+        val loaded = store.load()!!
+
+        assertNull("Half a biometric blob must not block the master password", loaded.biometric)
+        assertArrayEquals(header.wrappedKey, loaded.wrappedKey)
     }
 
     @Test
