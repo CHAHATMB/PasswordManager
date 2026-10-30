@@ -3,6 +3,7 @@ package com.example.passwordmanager.util
 import java.security.SecureRandom
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -66,11 +67,8 @@ class PasswordGeneratorTest {
     @Test
     fun lengthOutsideTheRangeIsRejected() {
         for (length in listOf(MIN_GENERATED_LENGTH - 1, MAX_GENERATED_LENGTH + 1)) {
-            try {
+            assertThrows("length $length", GeneratorOptionsException.LengthOutOfRange::class.java) {
                 generator.generate(GeneratorOptions(length = length))
-                throw AssertionError("length $length was accepted")
-            } catch (expected: GeneratorOptionsException.LengthOutOfRange) {
-                println("length $length rejected: ${expected.message}")
             }
         }
     }
