@@ -3,4 +3,6 @@
     <!-- Window backgrounds before Compose draws; must match `background` in ui/theme/Color.kt. -->
     <color name="background_light">#FFFAFDFB</color>
     <color name="background_dark">#FF191C1B</color>
+    <!-- Launcher icon and splash; must match light `primary` in ui/theme/Color.kt. -->
+    <color name="brand_teal">#FF006A60</color>
 </resources>
