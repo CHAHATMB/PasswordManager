@@ -1,6 +1,6 @@
 # Authenticator add flow
 
-Status: PLANNED
+Status: IN_REVIEW
 Backlog ID: 13
 
 ## Goal
