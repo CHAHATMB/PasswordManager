@@ -1,5 +1,7 @@
 <resources>
     <string name="app_name">Vaultly</string>
+    <string name="scanner_select_from_gallery">Select from gallery</string>
+    <string name="scanner_enter_setup_key">Enter setup key manually</string>
     <plurals name="totp_new_code_in">
         <item quantity="one">New code in %d second</item>
         <item quantity="other">New code in %d seconds</item>
