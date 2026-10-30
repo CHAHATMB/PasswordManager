@@ -137,7 +137,7 @@ class MainActivity : FragmentActivity() {
         var isSheetOpen by remember {
             mutableStateOf(false)
         }
-        val sheetState = rememberModalBottomSheetState()
+        val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
         val scope = rememberCoroutineScope()
 
         var selectedItemIndex by rememberSaveable {
