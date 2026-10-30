@@ -11,6 +11,7 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.passwordmanager.PasswordManagerApp
 import com.example.passwordmanager.data.Credential
 import com.example.passwordmanager.data.CredentialRepository
+import com.example.passwordmanager.data.CredentialSort
 import com.example.passwordmanager.data.vault.VaultException
 import com.example.passwordmanager.data.vault.VaultState
 import com.example.passwordmanager.util.SecureClipboard
@@ -35,18 +36,17 @@ class CredentialViewModel(
     private val vaultState: StateFlow<VaultState>
 ) : ViewModel() {
 
-    private val isSortedByWebsite = MutableStateFlow(false)
+    private val _sort = MutableStateFlow(CredentialSort.CREATED)
+    val sort = _sort.asStateFlow()
+
+    private val _favoritesOnly = MutableStateFlow(false)
+    val favoritesOnly = _favoritesOnly.asStateFlow()
 
     private val _searchText = MutableStateFlow("")
     val searchText = _searchText.asStateFlow()
 
-    val state = combine(_searchText, isSortedByWebsite) { query, sortByWebsite -> query to sortByWebsite }
-        .flatMapLatest { (query, sortByWebsite) -> repository.search(query, sortByWebsite) }
-        .map { CredentialState(credentials = it, isLoaded = true) }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), CredentialState())
-
-    val favorites = isSortedByWebsite
-        .flatMapLatest { repository.getFavorites(it) }
+    val state = combine(_searchText, _favoritesOnly, _sort, ::Triple)
+        .flatMapLatest { (query, favoritesOnly, sort) -> repository.search(query, favoritesOnly, sort) }
         .map { CredentialState(credentials = it, isLoaded = true) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), CredentialState())
 
@@ -105,9 +105,8 @@ class CredentialViewModel(
                 if (!isCredentialFormValid(credential.website, credential.password)) return
                 write { repository.upsertCredential(credential) }
             }
-            is CredentialEvent.SortCredential -> {
-                isSortedByWebsite.value = !isSortedByWebsite.value
-            }
+            is CredentialEvent.SetSort -> _sort.value = event.sort
+            is CredentialEvent.ToggleFavoritesOnly -> _favoritesOnly.value = !_favoritesOnly.value
             is CredentialEvent.FavoriteCredential ->{
                 write { repository.upsertCredential(event.credential.copy(isFav = !event.credential.isFav)) }
             }

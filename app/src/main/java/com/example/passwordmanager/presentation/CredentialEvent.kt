@@ -1,9 +1,11 @@
 package com.example.passwordmanager.presentation
 
 import com.example.passwordmanager.data.Credential
+import com.example.passwordmanager.data.CredentialSort
 
 sealed interface CredentialEvent {
-    object SortCredential: CredentialEvent
+    data class SetSort(val sort: CredentialSort): CredentialEvent
+    object ToggleFavoritesOnly: CredentialEvent
 
     data class DeleteCredential( var credential: Credential): CredentialEvent
     /** Re-inserts a deleted credential with its original id. */

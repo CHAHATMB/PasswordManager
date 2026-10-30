@@ -6,6 +6,7 @@ import androidx.test.core.app.ApplicationProvider
 import com.example.passwordmanager.data.Credential
 import com.example.passwordmanager.data.CredentialDatabase
 import com.example.passwordmanager.data.CredentialRepository
+import com.example.passwordmanager.data.CredentialSort
 import com.example.passwordmanager.data.crypto.Pbkdf2KeyDerivation
 import com.example.passwordmanager.data.crypto.TEST_KDF_PARAMS
 import com.example.passwordmanager.data.crypto.VaultCrypto
@@ -131,12 +132,12 @@ class VaultSessionTest {
         val repository = CredentialRepository(session)
         session.setup(password.toCharArray())
         repository.upsertCredential(Credential(website = "a.com", username = "u", password = "p", dataCreate = 1, note = ""))
-        assertEquals(1, repository.search("", sortByWebsite = true).first().size)
+        assertEquals(1, repository.search("", favoritesOnly = false, CredentialSort.WEBSITE).first().size)
 
         session.lock()
 
-        assertTrue(repository.search("", sortByWebsite = true).first().isEmpty())
-        assertTrue(repository.search("", sortByWebsite = false).first().isEmpty())
+        assertTrue(repository.search("", favoritesOnly = false, CredentialSort.WEBSITE).first().isEmpty())
+        assertTrue(repository.search("", favoritesOnly = false, CredentialSort.CREATED).first().isEmpty())
     }
 
     @Test

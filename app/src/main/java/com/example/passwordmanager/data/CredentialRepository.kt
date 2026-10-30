@@ -7,12 +7,12 @@ import kotlinx.coroutines.flow.Flow
 
 class CredentialRepository(private val session: VaultSession) {
 
-    /** Credentials whose website or username contains [query], ignoring case; all of them when blank. */
-    fun search(query: String, sortByWebsite: Boolean): Flow<List<Credential>> =
-        whileUnlocked(emptyList()) { it.search(likePattern(query), sortByWebsite) }
-
-    fun getFavorites(sortByWebsite: Boolean): Flow<List<Credential>> =
-        whileUnlocked(emptyList()) { it.getFavorites(sortByWebsite) }
+    /**
+     * Credentials whose website or username contains [query], ignoring case; all of them when blank.
+     * Only favourites when [favoritesOnly].
+     */
+    fun search(query: String, favoritesOnly: Boolean, sort: CredentialSort): Flow<List<Credential>> =
+        whileUnlocked(emptyList()) { it.search(likePattern(query), favoritesOnly, sort) }
 
     /** Emits null while locked or once the credential is deleted. */
     fun getById(id: Int): Flow<Credential?> = whileUnlocked(null) { it.getById(id) }

@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -11,6 +12,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.Sort
+import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Favorite
@@ -34,10 +36,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavController
 import com.example.passwordmanager.data.Credential
+import com.example.passwordmanager.data.CredentialSort
 import com.example.passwordmanager.presentation.CredentialEvent
 import com.example.passwordmanager.presentation.CredentialRoutes
 import com.example.passwordmanager.presentation.CredentialState
@@ -55,6 +59,8 @@ const val PASSWORD_MASK = "••••••••"
 fun CredentialScreen(
     state: CredentialState,
     searchText: String,
+    favoritesOnly: Boolean,
+    sort: CredentialSort,
     navController: NavController,
     onEvent: (CredentialEvent)->Unit,
     onLock: () -> Unit
@@ -65,9 +71,6 @@ fun CredentialScreen(
                 AppTopBar(
                     title = "Vaultly",
                     actions = {
-                        IconButton(onClick = { onEvent(CredentialEvent.SortCredential) }) {
-                            Icon(imageVector = Icons.AutoMirrored.Rounded.Sort, contentDescription = "Sort by date or website")
-                        }
                         IconButton(onClick = { navController.navigate(NavigationItem.Settings.route) }) {
                             Icon(imageVector = Icons.Rounded.Settings, contentDescription = "Settings")
                         }
@@ -76,14 +79,27 @@ fun CredentialScreen(
                         }
                     }
                 )
-                SearchField(
-                    text = searchText,
-                    onTextChange = { onEvent(CredentialEvent.OnSearchTextChange(it)) },
-                    placeholder = "Search website or username",
+                Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = Spacing.l)
-                )
+                        .padding(horizontal = Spacing.l),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    SearchField(
+                        text = searchText,
+                        onTextChange = { onEvent(CredentialEvent.OnSearchTextChange(it)) },
+                        placeholder = "Search website or username",
+                        modifier = Modifier.weight(1f)
+                    )
+                    IconButton(onClick = { onEvent(CredentialEvent.ToggleFavoritesOnly) }) {
+                        Icon(
+                            imageVector = if (favoritesOnly) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
+                            contentDescription = if (favoritesOnly) "Show all passwords" else "Show only favourites",
+                            tint = if (favoritesOnly) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    SortMenu(sort = sort, onSortChange = { onEvent(CredentialEvent.SetSort(it)) })
+                }
             }
         }
     ){
@@ -93,7 +109,13 @@ fun CredentialScreen(
             if (!state.isLoaded) {
                 Unit
             } else if (state.credentials.isEmpty()) {
-                if (searchText.isBlank()) {
+                if (favoritesOnly && searchText.isBlank()) {
+                    EmptyState(
+                        icon = Icons.Rounded.FavoriteBorder,
+                        title = "No favourites yet",
+                        message = "Add one from a password's ⋮ menu."
+                    )
+                } else if (searchText.isBlank()) {
                     EmptyState(
                         icon = Icons.Rounded.Shield,
                         title = "Your vault is empty",
@@ -114,7 +136,38 @@ fun CredentialScreen(
 }
 
 @Composable
-fun CredentialList(credentials: List<Credential>, navController: NavController, onEvent: (CredentialEvent) -> Unit) {
+private fun SortMenu(sort: CredentialSort, onSortChange: (CredentialSort) -> Unit) {
+    var isOpen by remember { mutableStateOf(false) }
+    Box {
+        IconButton(onClick = { isOpen = true }) {
+            Icon(imageVector = Icons.AutoMirrored.Rounded.Sort, contentDescription = "Sort")
+        }
+        DropdownMenu(expanded = isOpen, onDismissRequest = { isOpen = false }) {
+            CredentialSort.entries.forEach { option ->
+                DropdownMenuItem(
+                    text = { Text(text = option.label) },
+                    trailingIcon = {
+                        if (option == sort) Icon(imageVector = Icons.Rounded.Check, contentDescription = "Selected")
+                    },
+                    onClick = {
+                        isOpen = false
+                        onSortChange(option)
+                    }
+                )
+            }
+        }
+    }
+}
+
+private val CredentialSort.label
+    get() = when (this) {
+        CredentialSort.CREATED -> "Date added"
+        CredentialSort.WEBSITE -> "Name (A–Z)"
+        CredentialSort.MODIFIED -> "Recently modified"
+    }
+
+@Composable
+private fun CredentialList(credentials: List<Credential>, navController: NavController, onEvent: (CredentialEvent) -> Unit) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(Spacing.l),

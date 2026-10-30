@@ -8,8 +8,13 @@ import androidx.room.Transaction
 import androidx.room.Upsert
 import kotlinx.coroutines.flow.Flow
 
-// The CASE is NULL for every row unless sorting by website, so dataCreate decides the order.
-private const val ORDER_BY = "ORDER BY CASE WHEN :sortByWebsite THEN website END ASC, dataCreate ASC"
+// Each CASE is NULL for every row unless its sort is chosen, so dataCreate decides the order for CREATED.
+// updatedAt is 0 until the first edit, so MAX falls back to dataCreate for rows never edited.
+private const val ORDER_BY = "ORDER BY " +
+    "CASE WHEN :sort = 'WEBSITE' THEN website END ASC, " +
+    "CASE WHEN :sort = 'MODIFIED' THEN MAX(updatedAt, dataCreate) END DESC, " +
+    "CASE WHEN :sort = 'MODIFIED' THEN dataCreate END DESC, " +
+    "dataCreate ASC"
 
 @Dao
 interface CredentialDao {
@@ -21,13 +26,10 @@ interface CredentialDao {
 
     /** [pattern] is a LIKE pattern that uses `\` as its escape character. */
     @Query(
-        "SELECT * FROM credential WHERE website LIKE :pattern ESCAPE '\\' " +
-            "OR username LIKE :pattern ESCAPE '\\' $ORDER_BY"
+        "SELECT * FROM credential WHERE (website LIKE :pattern ESCAPE '\\' " +
+            "OR username LIKE :pattern ESCAPE '\\') AND (:favoritesOnly = 0 OR isFav = 1) $ORDER_BY"
     )
-    fun search(pattern: String, sortByWebsite: Boolean): Flow<List<Credential>>
-
-    @Query("SELECT * FROM credential WHERE isFav = 1 $ORDER_BY")
-    fun getFavorites(sortByWebsite: Boolean): Flow<List<Credential>>
+    fun search(pattern: String, favoritesOnly: Boolean, sort: CredentialSort): Flow<List<Credential>>
 
     @Query("SELECT * FROM credential WHERE id = :id")
     fun getById(id: Int): Flow<Credential?>

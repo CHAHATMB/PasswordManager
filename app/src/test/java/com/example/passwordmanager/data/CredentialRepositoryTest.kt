@@ -42,8 +42,8 @@ class CredentialRepositoryTest {
     fun flowsEmitEmptyWhileNotSetUp() = runTest {
         val repository = CredentialRepository(newSession())
 
-        assertEquals(emptyList<Credential>(), repository.search("", sortByWebsite = false).first())
-        assertEquals(emptyList<Credential>(), repository.search("", sortByWebsite = true).first())
+        assertEquals(emptyList<Credential>(), repository.search("", favoritesOnly = false, CredentialSort.CREATED).first())
+        assertEquals(emptyList<Credential>(), repository.search("", favoritesOnly = false, CredentialSort.WEBSITE).first())
     }
 
     @Test
@@ -56,8 +56,8 @@ class CredentialRepositoryTest {
         val repository = CredentialRepository(lockedSession)
 
         assertEquals(VaultState.Locked, lockedSession.state.value)
-        assertEquals(emptyList<Credential>(), repository.search("", sortByWebsite = false).first())
-        assertEquals(emptyList<Credential>(), repository.search("", sortByWebsite = true).first())
+        assertEquals(emptyList<Credential>(), repository.search("", favoritesOnly = false, CredentialSort.CREATED).first())
+        assertEquals(emptyList<Credential>(), repository.search("", favoritesOnly = false, CredentialSort.WEBSITE).first())
     }
 
     @Test
@@ -108,7 +108,7 @@ class CredentialRepositoryTest {
 
         val relaunchedSession = newSession()
         relaunchedSession.unlock(password.toCharArray())
-        val stored = CredentialRepository(relaunchedSession).search("", sortByWebsite = false).first()
+        val stored = CredentialRepository(relaunchedSession).search("", favoritesOnly = false, CredentialSort.CREATED).first()
 
         assertEquals(1, stored.size)
         assertEquals("github.com", stored[0].website)
@@ -122,11 +122,11 @@ class CredentialRepositoryTest {
         session.setup(password.toCharArray())
         val repository = CredentialRepository(session)
         repository.upsertCredential(credential("github.com"))
-        val saved = repository.search("", sortByWebsite = true).first().single()
+        val saved = repository.search("", favoritesOnly = false, CredentialSort.WEBSITE).first().single()
 
         repository.deleteCredential(saved)
 
-        assertTrue(repository.search("", sortByWebsite = true).first().isEmpty())
+        assertTrue(repository.search("", favoritesOnly = false, CredentialSort.WEBSITE).first().isEmpty())
     }
 
     private suspend fun writeFailure(repository: CredentialRepository, action: suspend () -> Unit): Exception? =
@@ -143,12 +143,12 @@ class CredentialRepositoryTest {
         listOf("alpha.com" to 1L, "beta.com" to 2L, "gamma.com" to 3L).forEach { (website, dateCreated) ->
             repository.upsertCredential(credential(website).copy(dataCreate = dateCreated))
         }
-        val before = repository.search("", sortByWebsite = false).first()
+        val before = repository.search("", favoritesOnly = false, CredentialSort.CREATED).first()
         val original = before[1]
 
         repository.upsertCredential(original.copy(username = "new-user", password = "new-secret"))
 
-        val after = repository.search("", sortByWebsite = false).first()
+        val after = repository.search("", favoritesOnly = false, CredentialSort.CREATED).first()
         println("Before edit: ${before.map { it.id to it.username }}, after: ${after.map { it.id to it.username }}")
         assertEquals(before.size, after.size)
         assertEquals(before.map { it.id }, after.map { it.id })
@@ -163,7 +163,7 @@ class CredentialRepositoryTest {
     fun restoreAfterDeleteReinsertsTheIdenticalRow() = runTest {
         val repository = unlockedRepository()
         repository.upsertCredential(credential("github.com").copy(note = "work account", isFav = true))
-        val deleted = repository.search("", sortByWebsite = false).first().single()
+        val deleted = repository.search("", favoritesOnly = false, CredentialSort.CREATED).first().single()
 
         repository.deleteCredential(deleted)
         assertNull(repository.getById(deleted.id).first())
@@ -178,16 +178,16 @@ class CredentialRepositoryTest {
     fun favouriteToggleUpdatesTheFavouritesQuery() = runTest {
         val repository = unlockedRepository()
         repository.upsertCredential(credential("github.com"))
-        val original = repository.search("", sortByWebsite = false).first().single()
+        val original = repository.search("", favoritesOnly = false, CredentialSort.CREATED).first().single()
 
         val toggled = original.copy(isFav = !original.isFav)
         repository.upsertCredential(toggled)
 
-        println("Favourites after toggling ${original.website} on: ${repository.getFavorites(sortByWebsite = false).first().map { it.website }}")
-        assertEquals(listOf(original.id), repository.getFavorites(sortByWebsite = false).first().map { it.id })
+        println("Favourites after toggling ${original.website} on: ${repository.search("", favoritesOnly = true, CredentialSort.CREATED).first().map { it.website }}")
+        assertEquals(listOf(original.id), repository.search("", favoritesOnly = true, CredentialSort.CREATED).first().map { it.id })
 
         repository.upsertCredential(toggled.copy(isFav = false))
-        assertTrue(repository.getFavorites(sortByWebsite = false).first().isEmpty())
+        assertTrue(repository.search("", favoritesOnly = true, CredentialSort.CREATED).first().isEmpty())
     }
 
     private suspend fun unlockedRepository(): CredentialRepository {

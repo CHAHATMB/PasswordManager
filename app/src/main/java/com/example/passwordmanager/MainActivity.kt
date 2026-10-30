@@ -64,7 +64,6 @@ import com.example.passwordmanager.presentation.CredentialEvent
 import com.example.passwordmanager.presentation.CredentialRoutes
 import com.example.passwordmanager.presentation.CredentialState
 import com.example.passwordmanager.presentation.CredentialViewModel
-import com.example.passwordmanager.presentation.FavoriteCredentialScreen
 import com.example.passwordmanager.presentation.LockScreen.LockViewModel
 import com.example.passwordmanager.presentation.LockScreen.SetupScreen
 import com.example.passwordmanager.presentation.LockScreen.UnlockScreen
@@ -93,9 +92,7 @@ import kotlinx.coroutines.launch
 
 private const val QR_IMAGE_MIME_TYPE = "image/*"
 private val FULL_SCREEN_ROUTES = setOf(CredentialRoutes.EDIT, AuthenticatorRoutes.EXPORT, NoteRoutes.EDITOR)
-private val FAB_ROUTES = setOf(
-    NavigationItem.Home.route, NavigationItem.Favorite.route, NavigationItem.Authenticator.route, NavigationItem.Notes.route
-)
+private val FAB_ROUTES = setOf(NavigationItem.Home.route, NavigationItem.Authenticator.route, NavigationItem.Notes.route)
 
 class MainActivity : FragmentActivity() {
 
@@ -272,7 +269,7 @@ class MainActivity : FragmentActivity() {
             snackbarHost = { SnackbarHost(snackbarHostState) },
             bottomBar = {
                 if (isBottomBarVisible) NavigationBar {
-                    listOf(NavigationItem.Home, NavigationItem.Favorite, NavigationItem.Authenticator, NavigationItem.Notes).forEach { item ->
+                    listOf(NavigationItem.Home, NavigationItem.Authenticator, NavigationItem.Notes).forEach { item ->
                         val isSelected = currentRoute == item.route
                         NavigationBarItem(
                             selected = isSelected,
@@ -345,9 +342,13 @@ class MainActivity : FragmentActivity() {
         ) {
             composable(NavigationItem.Home.route) {
                 val searchText by viewModel.searchText.collectAsState()
+                val favoritesOnly by viewModel.favoritesOnly.collectAsState()
+                val sort by viewModel.sort.collectAsState()
                 CredentialScreen(
                     state = state,
                     searchText = searchText,
+                    favoritesOnly = favoritesOnly,
+                    sort = sort,
                     navController = navController,
                     onEvent = viewModel::onEvent,
                     onLock = lockViewModel::lock
@@ -358,14 +359,6 @@ class MainActivity : FragmentActivity() {
                     onEvent = viewModel::onEvent,
                     loadPassphraseWords = loadPassphraseWords,
                     onSaved = { navController.popBackStack() }
-                )
-            }
-            composable(NavigationItem.Favorite.route) {
-                val favorites by viewModel.favorites.collectAsState()
-                FavoriteCredentialScreen(
-                    state = favorites,
-                    navController = navController,
-                    onEvent = viewModel::onEvent
                 )
             }
             composable(NavigationItem.Authenticator.route) {
