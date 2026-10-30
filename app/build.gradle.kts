@@ -101,6 +101,7 @@ dependencies {
     implementation("com.lambdapioneer.argon2kt:argon2kt:1.6.0")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
     implementation("org.apache.commons:commons-csv:1.10.0")
+    implementation("com.journeyapps:zxing-android-embedded:4.3.0")
 
 
 

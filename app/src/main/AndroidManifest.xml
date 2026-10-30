@@ -26,6 +26,18 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <activity
+            android:name=".SecureCaptureActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:stateNotNeeded="true"
+            android:theme="@style/zxing_CaptureTheme"
+            android:windowSoftInputMode="stateAlwaysHidden"
+            tools:ignore="LockedOrientationActivity" />
+        <!-- The library's own scanner lacks FLAG_SECURE; only SecureCaptureActivity is used. -->
+        <activity
+            android:name="com.journeyapps.barcodescanner.CaptureActivity"
+            tools:node="remove" />
     </application>
 
 </manifest>
