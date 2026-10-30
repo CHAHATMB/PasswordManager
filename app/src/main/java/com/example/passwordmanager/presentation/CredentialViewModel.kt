@@ -9,12 +9,14 @@ import com.example.passwordmanager.PasswordManagerApp
 import com.example.passwordmanager.data.Credential
 import com.example.passwordmanager.data.CredentialRepository
 import com.example.passwordmanager.data.vault.VaultException
+import com.example.passwordmanager.data.vault.VaultState
 import com.example.passwordmanager.util.SecureClipboard
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
@@ -26,7 +28,8 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalCoroutinesApi::class)
 class CredentialViewModel(
     private val repository: CredentialRepository,
-    private val clipboard: SecureClipboard
+    private val clipboard: SecureClipboard,
+    vaultState: StateFlow<VaultState>
 ) : ViewModel() {
 
     private val isSortedByWebsite = MutableStateFlow(false)
@@ -47,6 +50,17 @@ class CredentialViewModel(
     private val _deletedCredentials = Channel<Credential>(Channel.BUFFERED)
     /** Each credential right after it is deleted, so the UI can offer Undo. */
     val deletedCredentials = _deletedCredentials.receiveAsFlow()
+
+    init {
+        // A delete still buffered at lock time must not offer Undo after the next unlock.
+        viewModelScope.launch {
+            vaultState.collect { state ->
+                if (state !is VaultState.Unlocked) {
+                    while (_deletedCredentials.tryReceive().isSuccess) Unit
+                }
+            }
+        }
+    }
 
     fun credential(id: Int): Flow<Credential?> = repository.getById(id)
 
@@ -105,7 +119,7 @@ class CredentialViewModel(
         val Factory = viewModelFactory {
             initializer {
                 val container = (this[APPLICATION_KEY] as PasswordManagerApp).container
-                CredentialViewModel(container.credentialRepository, container.secureClipboard)
+                CredentialViewModel(container.credentialRepository, container.secureClipboard, container.vaultSession.state)
             }
         }
     }
