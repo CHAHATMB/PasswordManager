@@ -72,11 +72,11 @@ import com.example.passwordmanager.presentation.LockScreen.SetupScreen
 import com.example.passwordmanager.presentation.LockScreen.UnlockScreen
 import com.example.passwordmanager.presentation.NavigationItem
 import com.example.passwordmanager.presentation.NoteRoutes
-import com.example.passwordmanager.presentation.Onboarding.OnboardingScreen
 import com.example.passwordmanager.presentation.Notes.NoteEditorScreen
 import com.example.passwordmanager.presentation.Notes.NotesEvent
 import com.example.passwordmanager.presentation.Notes.NotesScreen
 import com.example.passwordmanager.presentation.Notes.NotesViewModel
+import com.example.passwordmanager.presentation.Onboarding.OnboardingScreen
 import com.example.passwordmanager.presentation.SettingsScreen.BACKUP_FILE_NAME
 import com.example.passwordmanager.presentation.SettingsScreen.BACKUP_MIME_TYPE
 import com.example.passwordmanager.presentation.SettingsScreen.BackupEvent
