@@ -11,6 +11,7 @@ import com.example.passwordmanager.data.crypto.BiometricKeyStore
 import com.example.passwordmanager.data.crypto.KdfParams
 import com.example.passwordmanager.data.crypto.VaultCrypto
 import com.example.passwordmanager.data.settings.SettingsStore
+import com.example.passwordmanager.data.totp.TotpRepository
 import com.example.passwordmanager.data.vault.UnlockThrottle
 import com.example.passwordmanager.data.vault.VaultHeaderStore
 import com.example.passwordmanager.data.vault.VaultSession
@@ -53,6 +54,8 @@ class AppContainer(context: Context) {
     )
 
     val credentialRepository = CredentialRepository(vaultSession)
+
+    val totpRepository = TotpRepository(vaultSession)
 
     val backupRepository = BackupRepository(
         contentResolver = appContext.contentResolver,

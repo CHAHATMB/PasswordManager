@@ -1,14 +1,23 @@
 package com.example.passwordmanager.data
 
 import android.content.Context
+import androidx.room.AutoMigration
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import com.example.passwordmanager.data.totp.TotpAccount
+import com.example.passwordmanager.data.totp.TotpDao
 import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
 
-@Database(entities = [Credential::class], version = 1, exportSchema = true)
+@Database(
+    entities = [Credential::class, TotpAccount::class],
+    version = 2,
+    exportSchema = true,
+    autoMigrations = [AutoMigration(from = 1, to = 2)]
+)
 abstract class CredentialDatabase: RoomDatabase() {
     abstract val dao: CredentialDao
+    abstract val totpDao: TotpDao
 
     companion object {
         const val VAULT_DB_NAME = "vault.db"
