@@ -257,8 +257,9 @@ class NotesViewModelTest {
     }
 
     @Test
-    fun lockDiscardsTheEditorAndThePendingUndo() = runTest {
+    fun lockDiscardsTheEditorThePendingUndoAndTheSearch() = runTest {
         val viewModel = newUnlockedViewModel()
+        viewModel.onEvent(NotesEvent.OnSearchTextChange("wifi"))
         repository.upsertNote(Note(title = "Wifi", body = "box", createdAt = 1, updatedAt = 1))
         viewModel.openEditor(repository.getAll().single().id)
         viewModel.onEvent(NotesEvent.DeleteNote)
@@ -269,6 +270,7 @@ class NotesViewModelTest {
         session.unlock(password.toCharArray())
 
         assertNull(viewModel.editor)
+        assertEquals("", viewModel.searchText.value)
         assertNull(withTimeoutOrNull(1000) { viewModel.deletedNotes.first() })
         assertEquals(emptyList<Note>(), repository.getAll())
     }

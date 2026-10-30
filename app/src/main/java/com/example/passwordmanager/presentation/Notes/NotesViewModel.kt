@@ -67,11 +67,12 @@ class NotesViewModel(
         private set
 
     init {
-        // A half-typed note or a pending Undo must not outlive the session.
+        // A half-typed note, a pending Undo or a search query must not outlive the session.
         viewModelScope.launch {
             vaultState.collect { state ->
                 if (state !is VaultState.Unlocked) {
                     editor = null
+                    _searchText.value = ""
                     while (_deletedNotes.tryReceive().isSuccess) Unit
                 }
             }
