@@ -22,3 +22,22 @@
 
 ### Deviation: Home row actions moved into a "More actions" menu
 Accepted. The brief requires an `ItemRow` with a monogram and a "trailing slot". It does not require four inline buttons, and four 48 dp buttons plus a 40 dp avatar would squeeze the title at phone width. The two most frequent actions, Copy and Favourite, stay inline. Show/Hide password and Delete are still available from the row's overflow menu, and both remain on the Detail screen. Putting Delete behind a menu also makes accidental deletes less likely, and Undo is kept. The cost is one extra tap to reveal a password from the list, which is reasonable. The verifier should run the regression flows (reveal, delete + Undo) through the menu.
+
+## Follow-up review (post-verify fix)
+- Commit range reviewed: ca69960..97c1d81 (code: 91bbdca)
+- Verdict: APPROVED
+
+### Findings
+| # | Severity (blocker/major/minor) | File:line | Issue | Suggested fix |
+|---|---|---|---|---|
+| 1 | minor | presentation/AddScreen/AddCredentialScreen.kt:107-117 | The field lambdas build `draft.copy(...)` from the draft captured at the last composition. Two edits to *different* fields before a recomposition would drop the first. This can't happen with normal typing (each `onValueChange` carries the full field value, and there is one focused field), so it is only theoretical. | None needed. |
+| 2 | minor | MainActivity.kt:283 | The `Add` nav route is unused (the dev-log says so) and is the only caller besides Edit of the stateful overload. This is pre-existing dead code. | Optional: delete the route in a separate `refactor:` commit. |
+| 3 | minor | presentation/CredentialViewModelTest.kt | These tests need Robolectric plus a real Room/`VaultSession`, which is heavier than the logic needs. That is the price of the VM's constructor and matches the existing test setup. | None. |
+
+### Checklist
+- [x] Correctness. The FAB sends `OpenAddSheet`, which always starts a fresh draft. Swipe/back sends `CloseAddSheet`. Save sends `Save` and then `CloseAddSheet` after the hide animation. `invokeOnCompletion` also runs on cancellation, so the draft can't be left behind. Lock clears the draft in the same `vaultState` collector that drains the Undo channel, and `VaultShell` leaves composition, so the sheet can't reappear after unlock. `ChangeAddDraft` is ignored while closed, so a late callback can't reopen the sheet. Generator "Use": `rememberUpdatedState(onDismiss)` correctly fixes the stale-closure overwrite of the generated password. The swipe-dismiss path still uses `onDismiss` directly, which is fine because the draft can't change during that path. Edit still uses local state and is unchanged.
+- [x] Security. The draft lives only in the ViewModel (in memory, not `SavedStateHandle`/`rememberSaveable`), so no plaintext goes into the Bundle. Nothing new is logged. It is cleared on lock. Process death drops it, which is acceptable.
+- [x] Simple. One nullable state with three events, following the existing `onEvent` pattern. The stateful `AddCredentialScreen` overload is justified: it is a 3-line delegate that keeps Edit's local-state behaviour without duplicating the form. `CredentialDraft(credential)` replaces four `remember`s. The choice of Compose state over a `StateFlow` is explained.
+- [x] Tests. All three are meaningful and not redundant: the open/change/close lifecycle, the late change after close (the guard branch), and lock discarding the draft (the security-relevant one).
+- [x] Commits. `fix:` + `docs:` follow Conventional Commits. The short body explains the why.
+- [x] Build + unit tests. `./gradlew assembleDebug testDebugUnitTest` → BUILD SUCCESSFUL, 138 tests, 0 failures.
