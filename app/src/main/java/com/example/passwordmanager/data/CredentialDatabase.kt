@@ -1,10 +1,40 @@
 package com.example.passwordmanager.data
 
+import android.content.Context
 import androidx.room.Database
+import androidx.room.Room
 import androidx.room.RoomDatabase
+import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
 
-@Database(entities = [Credential::class], version = 1)
+@Database(entities = [Credential::class], version = 1, exportSchema = true)
 abstract class CredentialDatabase: RoomDatabase() {
     abstract val dao: CredentialDao
 
+    companion object {
+        const val VAULT_DB_NAME = "vault.db"
+        const val LEGACY_DB_NAME = "credential.db"
+
+        /** Blocking: opens the DB immediately so a bad key fails here rather than on the first query. */
+        fun openEncrypted(context: Context, vaultKey: ByteArray): CredentialDatabase =
+            Room.databaseBuilder(context, CredentialDatabase::class.java, VAULT_DB_NAME)
+                .openHelperFactory(SupportOpenHelperFactory(sqlCipherRawKey(vaultKey)))
+                .build()
+                .also { it.openHelper.writableDatabase }
+
+        // SQLCipher treats a key of the form x'<64 hex>' as a raw key and skips its own KDF.
+        // Built without a String so the key is never interned. A fresh array per open, since the factory may clear it.
+        private fun sqlCipherRawKey(key: ByteArray): ByteArray {
+            val hexDigits = "0123456789abcdef"
+            val rawKey = ByteArray(key.size * 2 + 3)
+            rawKey[0] = 'x'.code.toByte()
+            rawKey[1] = '\''.code.toByte()
+            key.forEachIndexed { index, byte ->
+                val value = byte.toInt() and 0xff
+                rawKey[2 + index * 2] = hexDigits[value ushr 4].code.toByte()
+                rawKey[3 + index * 2] = hexDigits[value and 0x0f].code.toByte()
+            }
+            rawKey[rawKey.size - 1] = '\''.code.toByte()
+            return rawKey
+        }
+    }
 }
