@@ -4,6 +4,8 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.test.core.app.ApplicationProvider
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -85,5 +87,17 @@ class SettingsStoreTest {
         prefs.edit().putString("notes_layout", "MASONRY").commit()
 
         assertEquals(NotesLayout.GRID, SettingsStore(prefs).notesLayout.value)
+    }
+
+    @Test
+    fun onboardingIsNotDoneByDefault() {
+        assertFalse(SettingsStore(prefs).isOnboardingDone)
+    }
+
+    @Test
+    fun onboardingDoneSurvivesANewStore() {
+        SettingsStore(prefs).isOnboardingDone = true
+
+        assertTrue("read back by a new store", SettingsStore(prefs).isOnboardingDone)
     }
 }
