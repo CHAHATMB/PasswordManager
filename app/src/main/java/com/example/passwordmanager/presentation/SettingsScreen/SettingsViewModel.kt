@@ -12,6 +12,7 @@ import com.example.passwordmanager.data.backup.EncryptedBackup
 import com.example.passwordmanager.data.crypto.BiometricKeyStore
 import com.example.passwordmanager.data.settings.AutoLockTimeout
 import com.example.passwordmanager.data.settings.SettingsStore
+import com.example.passwordmanager.data.settings.ThemeMode
 import com.example.passwordmanager.data.vault.VaultException
 import com.example.passwordmanager.data.vault.VaultSession
 import com.example.passwordmanager.data.vault.VaultState
@@ -30,6 +31,7 @@ import kotlinx.coroutines.launch
 
 data class SettingsState(
     val autoLockTimeout: AutoLockTimeout = AutoLockTimeout.DEFAULT,
+    val themeMode: ThemeMode = ThemeMode.DEFAULT,
     val isBiometricEnabled: Boolean = false,
     val isBiometricError: Boolean = false,
     val backupDialog: BackupDialog? = null
@@ -61,6 +63,7 @@ class SettingsViewModel(
         _state.update {
             it.copy(
                 autoLockTimeout = settingsStore.autoLockTimeout,
+                themeMode = settingsStore.themeMode.value,
                 isBiometricEnabled = session.biometricIv() != null,
                 isBiometricError = false
             )
@@ -70,6 +73,11 @@ class SettingsViewModel(
     fun setAutoLockTimeout(timeout: AutoLockTimeout) {
         settingsStore.autoLockTimeout = timeout
         _state.update { it.copy(autoLockTimeout = timeout) }
+    }
+
+    fun setThemeMode(mode: ThemeMode) {
+        settingsStore.setThemeMode(mode)
+        _state.update { it.copy(themeMode = mode) }
     }
 
     /** The ENCRYPT cipher for the enable prompt, or null (with an error shown) if no key can be made. */

@@ -336,6 +336,7 @@ class MainActivity : FragmentActivity() {
                 SettingsScreen(
                     state = settingsState,
                     isBiometricAvailable = isBiometricAvailable,
+                    onThemeModeChange = settingsViewModel::setThemeMode,
                     onAutoLockTimeoutChange = settingsViewModel::setAutoLockTimeout,
                     onBiometricToggle = { enabled ->
                         if (enabled) showEnablePrompt() else settingsViewModel.disableBiometric()

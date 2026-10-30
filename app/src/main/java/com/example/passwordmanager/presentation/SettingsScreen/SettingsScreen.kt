@@ -10,8 +10,12 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -19,6 +23,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
 import com.example.passwordmanager.data.settings.AutoLockTimeout
+import com.example.passwordmanager.data.settings.ThemeMode
 import com.example.passwordmanager.presentation.components.AppTopBar
 import com.example.passwordmanager.presentation.components.SectionHeader
 import com.example.passwordmanager.ui.theme.Spacing
@@ -27,6 +32,7 @@ import com.example.passwordmanager.ui.theme.Spacing
 fun SettingsScreen(
     state: SettingsState,
     isBiometricAvailable: Boolean,
+    onThemeModeChange: (ThemeMode) -> Unit,
     onAutoLockTimeoutChange: (AutoLockTimeout) -> Unit,
     onBiometricToggle: (enabled: Boolean) -> Unit,
     onBackupEvent: (BackupEvent) -> Unit,
@@ -40,6 +46,8 @@ fun SettingsScreen(
                 .padding(start = Spacing.l, end = Spacing.l, bottom = Spacing.l),
             verticalArrangement = Arrangement.spacedBy(Spacing.s)
         ) {
+            SectionHeader(text = "Theme")
+            ThemeSelector(selected = state.themeMode, onSelect = onThemeModeChange)
             SectionHeader(text = "Auto-lock")
             Column(modifier = Modifier.selectableGroup()) {
                 AutoLockTimeout.entries.forEach { timeout ->
@@ -85,6 +93,28 @@ fun SettingsScreen(
             BackupSection(dialog = state.backupDialog, onEvent = onBackupEvent, onPick = onPickBackupFile)
         }
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ThemeSelector(selected: ThemeMode, onSelect: (ThemeMode) -> Unit) {
+    SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+        ThemeMode.entries.forEachIndexed { index, mode ->
+            SegmentedButton(
+                selected = mode == selected,
+                onClick = { onSelect(mode) },
+                shape = SegmentedButtonDefaults.itemShape(index = index, count = ThemeMode.entries.size)
+            ) {
+                Text(text = mode.label())
+            }
+        }
+    }
+}
+
+private fun ThemeMode.label(): String = when (this) {
+    ThemeMode.SYSTEM -> "System"
+    ThemeMode.LIGHT -> "Light"
+    ThemeMode.DARK -> "Dark"
 }
 
 private fun AutoLockTimeout.label(): String = when (this) {
