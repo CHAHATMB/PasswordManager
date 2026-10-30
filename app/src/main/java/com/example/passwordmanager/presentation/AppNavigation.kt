@@ -1,6 +1,8 @@
 package com.example.passwordmanager.presentation
 
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.StickyNote2
+import androidx.compose.material.icons.automirrored.outlined.StickyNote2
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Key
@@ -21,7 +23,9 @@ enum class Screen {
     DETAIL,
     EDIT,
     AUTHENTICATOR,
-    TOTP_EXPORT
+    TOTP_EXPORT,
+    NOTES,
+    NOTE_EDITOR
 }
 sealed class NavigationItem(val route: String, val selectedIcon: ImageVector, val unSelectedIcon: ImageVector, val title: String ) {
     object Home : NavigationItem(Screen.HOME.name, Icons.Filled.Key, Icons.Outlined.Key, "Passwords")
@@ -29,6 +33,7 @@ sealed class NavigationItem(val route: String, val selectedIcon: ImageVector, va
     object Favorite : NavigationItem(Screen.FAVORITE.name, Icons.Filled.Favorite, Icons.Outlined.FavoriteBorder, "Favorites")
     object Settings : NavigationItem(Screen.SETTINGS.name, Icons.Filled.Settings, Icons.Outlined.Settings, "Settings")
     object Authenticator : NavigationItem(Screen.AUTHENTICATOR.name, Icons.Filled.Shield, Icons.Outlined.Shield, "Authenticator")
+    object Notes : NavigationItem(Screen.NOTES.name, Icons.AutoMirrored.Filled.StickyNote2, Icons.AutoMirrored.Outlined.StickyNote2, "Notes")
 }
 
 object CredentialRoutes {
@@ -42,4 +47,12 @@ object CredentialRoutes {
 
 object AuthenticatorRoutes {
     val EXPORT = Screen.TOTP_EXPORT.name
+}
+
+object NoteRoutes {
+    const val ID_ARG = "noteId"
+    const val NEW_NOTE_ID = -1
+    val EDITOR = "${Screen.NOTE_EDITOR.name}/{$ID_ARG}"
+
+    fun editor(id: Int) = "${Screen.NOTE_EDITOR.name}/$id"
 }

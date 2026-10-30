@@ -69,6 +69,11 @@ import com.example.passwordmanager.presentation.LockScreen.LockViewModel
 import com.example.passwordmanager.presentation.LockScreen.SetupScreen
 import com.example.passwordmanager.presentation.LockScreen.UnlockScreen
 import com.example.passwordmanager.presentation.NavigationItem
+import com.example.passwordmanager.presentation.NoteRoutes
+import com.example.passwordmanager.presentation.Notes.NoteEditorScreen
+import com.example.passwordmanager.presentation.Notes.NotesEvent
+import com.example.passwordmanager.presentation.Notes.NotesScreen
+import com.example.passwordmanager.presentation.Notes.NotesViewModel
 import com.example.passwordmanager.presentation.SettingsScreen.BACKUP_FILE_NAME
 import com.example.passwordmanager.presentation.SettingsScreen.BACKUP_MIME_TYPE
 import com.example.passwordmanager.presentation.SettingsScreen.BackupEvent
@@ -87,7 +92,10 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
 private const val QR_IMAGE_MIME_TYPE = "image/*"
-private val FAB_ROUTES = setOf(NavigationItem.Home.route, NavigationItem.Favorite.route, NavigationItem.Authenticator.route)
+private val FULL_SCREEN_ROUTES = setOf(CredentialRoutes.EDIT, AuthenticatorRoutes.EXPORT, NoteRoutes.EDITOR)
+private val FAB_ROUTES = setOf(
+    NavigationItem.Home.route, NavigationItem.Favorite.route, NavigationItem.Authenticator.route, NavigationItem.Notes.route
+)
 
 class MainActivity : FragmentActivity() {
 
@@ -95,6 +103,7 @@ class MainActivity : FragmentActivity() {
     private val viewModel by viewModels<CredentialViewModel> { CredentialViewModel.Factory }
     private val settingsViewModel by viewModels<SettingsViewModel> { SettingsViewModel.Factory }
     private val authenticatorViewModel by viewModels<AuthenticatorViewModel> { AuthenticatorViewModel.Factory }
+    private val notesViewModel by viewModels<NotesViewModel> { NotesViewModel.Factory }
 
     private val autoLockObserver get() = (application as PasswordManagerApp).container.autoLockObserver
     private val settingsStore get() = (application as PasswordManagerApp).container.settingsStore
@@ -242,15 +251,27 @@ class MainActivity : FragmentActivity() {
                 }
             }
         }
-        // Hidden on Edit and while typing (e.g. Home search): with adjustResize the bar and
+        LaunchedEffect(Unit) {
+            notesViewModel.deletedNotes.collectLatest { note ->
+                val result = snackbarHostState.showSnackbar(
+                    message = "Deleted ${note.title}",
+                    actionLabel = "Undo",
+                    duration = SnackbarDuration.Short
+                )
+                if (result == SnackbarResult.ActionPerformed) {
+                    notesViewModel.onEvent(NotesEvent.RestoreNote(note))
+                }
+            }
+        }
+        // Hidden on the full-screen forms and while typing (e.g. Home search): with adjustResize the bar and
         // FAB would ride above the keyboard.
-        val isBottomBarVisible = currentRoute != CredentialRoutes.EDIT && currentRoute != AuthenticatorRoutes.EXPORT && !isKeyboardOpen
+        val isBottomBarVisible = currentRoute !in FULL_SCREEN_ROUTES && !isKeyboardOpen
         val isFabVisible = isBottomBarVisible && currentRoute in FAB_ROUTES
         Scaffold(modifier = Modifier.fillMaxSize(),
             snackbarHost = { SnackbarHost(snackbarHostState) },
             bottomBar = {
                 if (isBottomBarVisible) NavigationBar {
-                    listOf(NavigationItem.Home, NavigationItem.Favorite, NavigationItem.Authenticator).forEach { item ->
+                    listOf(NavigationItem.Home, NavigationItem.Favorite, NavigationItem.Authenticator, NavigationItem.Notes).forEach { item ->
                         val isSelected = currentRoute == item.route
                         NavigationBarItem(
                             selected = isSelected,
@@ -275,10 +296,10 @@ class MainActivity : FragmentActivity() {
             },
             floatingActionButton = {
                 if (isFabVisible) FloatingActionButton(onClick = {
-                    if (currentRoute == NavigationItem.Authenticator.route) {
-                        authenticatorViewModel.onEvent(AuthenticatorEvent.OpenAddOptions)
-                    } else {
-                        viewModel.onEvent(CredentialEvent.OpenAddSheet)
+                    when (currentRoute) {
+                        NavigationItem.Authenticator.route -> authenticatorViewModel.onEvent(AuthenticatorEvent.OpenAddOptions)
+                        NavigationItem.Notes.route -> navController.navigate(NoteRoutes.editor(NoteRoutes.NEW_NOTE_ID)) { launchSingleTop = true }
+                        else -> viewModel.onEvent(CredentialEvent.OpenAddSheet)
                     }
                 }) {
                     Icon(Icons.Filled.Add, contentDescription = "Add")
@@ -354,6 +375,45 @@ class MainActivity : FragmentActivity() {
                     onScanImage = ::openImagePicker,
                     onExport = { navController.navigate(AuthenticatorRoutes.EXPORT) }
                 )
+            }
+            composable(NavigationItem.Notes.route) {
+                val notesState by notesViewModel.state.collectAsState()
+                val searchText by notesViewModel.searchText.collectAsState()
+                NotesScreen(
+                    state = notesState,
+                    searchText = searchText,
+                    onEvent = notesViewModel::onEvent,
+                    onOpen = { id -> navController.navigate(NoteRoutes.editor(id)) }
+                )
+            }
+            composable(
+                NoteRoutes.EDITOR,
+                arguments = listOf(navArgument(NoteRoutes.ID_ARG) { type = NavType.IntType })
+            ) { entry ->
+                val id = entry.arguments?.getInt(NoteRoutes.ID_ARG) ?: return@composable
+                // Like Detail: a second tap on Back, Save or Delete lands after this entry is gone; ignore it.
+                val isCurrent = { navController.currentBackStackEntry?.id == entry.id }
+                val close = { navController.popBackStack(NoteRoutes.EDITOR, inclusive = true) }
+                LaunchedEffect(id) { if (!notesViewModel.openEditor(id) && isCurrent()) close() }
+                notesViewModel.editor?.let { editor ->
+                    NoteEditorScreen(
+                        editor = editor,
+                        autoTitle = notesViewModel::autoTitle,
+                        onEvent = notesViewModel::onEvent,
+                        onClose = {
+                            if (isCurrent()) {
+                                notesViewModel.onEvent(NotesEvent.CloseEditor)
+                                close()
+                            }
+                        },
+                        onDelete = {
+                            if (isCurrent()) {
+                                notesViewModel.onEvent(NotesEvent.DeleteNote)
+                                close()
+                            }
+                        }
+                    )
+                }
             }
             composable(AuthenticatorRoutes.EXPORT) { entry ->
                 // Scoped to this entry, so leaving the screen discards the accounts and QR bitmaps.
