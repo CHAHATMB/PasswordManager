@@ -265,17 +265,21 @@ class MainActivity : FragmentActivity() {
             ) { entry ->
                 val id = entry.arguments?.getInt(CredentialRoutes.ID_ARG) ?: return@composable
                 val credential by remember(id) { viewModel.credential(id) }.collectAsState(initial = null)
-                // Guarded pop: a double tap on Back or Delete must not pop Home as well.
+                // A second tap on Back or Delete lands after this entry is popped; ignore it so it
+                // neither pops Home nor deletes (and offers Undo) twice.
+                val isCurrent = { navController.currentBackStackEntry?.id == entry.id }
                 val close = { navController.popBackStack(CredentialRoutes.DETAIL, inclusive = true) }
                 credential?.let {
                     CredentialDetailScreen(
                         credential = it,
                         onEvent = viewModel::onEvent,
-                        onBack = { close() },
+                        onBack = { if (isCurrent()) close() },
                         onEdit = { navController.navigate(CredentialRoutes.edit(id)) },
                         onDelete = {
-                            viewModel.onEvent(CredentialEvent.DeleteCredential(it))
-                            close()
+                            if (isCurrent()) {
+                                close()
+                                viewModel.onEvent(CredentialEvent.DeleteCredential(it))
+                            }
                         }
                     )
                 }
