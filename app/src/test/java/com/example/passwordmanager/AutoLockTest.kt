@@ -28,4 +28,21 @@ class AutoLockTest {
             assertTrue("$timeout did not lock after the boundary", shouldLock(stoppedAt, stoppedAt + timeout.millis + 1, timeout))
         }
     }
+
+    @Test
+    fun appTripWithImmediatelyStaysUnlockedUntilTheCap() {
+        val timeout = AutoLockTimeout.IMMEDIATELY
+
+        assertFalse(shouldLock(stoppedAt, stoppedAt, timeout, isAppTrip = true))
+        assertFalse(shouldLock(stoppedAt, stoppedAt + APP_TRIP_MAX_MILLIS - 1, timeout, isAppTrip = true))
+        assertTrue(shouldLock(stoppedAt, stoppedAt + APP_TRIP_MAX_MILLIS, timeout, isAppTrip = true))
+    }
+
+    @Test
+    fun appTripNeverLocksEarlierThanTheChosenTimeout() {
+        val timeout = AutoLockTimeout.MINUTES_15
+
+        assertFalse(shouldLock(stoppedAt, stoppedAt + APP_TRIP_MAX_MILLIS, timeout, isAppTrip = true))
+        assertTrue(shouldLock(stoppedAt, stoppedAt + timeout.millis, timeout, isAppTrip = true))
+    }
 }
