@@ -7,8 +7,10 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Switch
@@ -27,12 +29,14 @@ fun SettingsScreen(
     state: SettingsState,
     isBiometricAvailable: Boolean,
     onAutoLockTimeoutChange: (AutoLockTimeout) -> Unit,
-    onBiometricToggle: (enabled: Boolean) -> Unit
+    onBiometricToggle: (enabled: Boolean) -> Unit,
+    onBackupEvent: (BackupEvent) -> Unit
 ) {
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
+            .verticalScroll(rememberScrollState())
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
@@ -80,6 +84,7 @@ fun SettingsScreen(
                 Text(text = "Couldn't turn on fingerprint unlock. Please try again.", color = MaterialTheme.colorScheme.error)
             }
         }
+        BackupSection(dialog = state.backupDialog, onEvent = onBackupEvent)
     }
 }
 

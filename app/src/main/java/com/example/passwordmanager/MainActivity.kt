@@ -310,7 +310,8 @@ class MainActivity : FragmentActivity() {
                     onAutoLockTimeoutChange = settingsViewModel::setAutoLockTimeout,
                     onBiometricToggle = { enabled ->
                         if (enabled) showEnablePrompt() else settingsViewModel.disableBiometric()
-                    }
+                    },
+                    onBackupEvent = settingsViewModel::onBackupEvent
                 )
             }
         }
