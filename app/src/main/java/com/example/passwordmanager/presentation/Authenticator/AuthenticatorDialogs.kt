@@ -187,7 +187,25 @@ fun AuthenticatorDialogs(
             properties = secureDialog,
             title = { Text(text = "Account not added") },
             text = { Text(text = dialog.error.message()) },
-            confirmButton = { TextButton(onClick = dismiss) { Text(text = "OK") } }
+            confirmButton = {
+                if (dialog.error == ScanError.CameraPermissionDenied) {
+                    // Stacked: side by side, the two labels don't fit next to Cancel on a phone.
+                    Column(horizontalAlignment = Alignment.End) {
+                        TextButton(onClick = {
+                            dismiss()
+                            onScanImage()
+                        }) { Text(text = "Select from gallery") }
+                        TextButton(onClick = { onEvent(AuthenticatorEvent.OpenManualEntry) }) { Text(text = "Enter setup key") }
+                    }
+                } else {
+                    TextButton(onClick = dismiss) { Text(text = "OK") }
+                }
+            },
+            dismissButton = if (dialog.error == ScanError.CameraPermissionDenied) {
+                { TextButton(onClick = dismiss) { Text(text = "Cancel") } }
+            } else {
+                null
+            }
         )
     }
 }
@@ -337,5 +355,5 @@ private fun ScanError.message(): String = when (this) {
     ScanError.InvalidCode -> "This authenticator QR code has an invalid setup key or settings."
     ScanError.NoQrCodeInImage -> "No QR code was found in this image."
     ScanError.CameraPermissionDenied ->
-        "Scanning needs access to the camera. You can scan from an image or enter the setup key instead."
+        "Scanning needs access to the camera. You can allow it in Settings, or select a QR image or enter the setup key instead."
 }
