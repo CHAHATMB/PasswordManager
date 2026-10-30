@@ -128,8 +128,14 @@ class SettingsViewModel(
             is BackupEvent.SaveBackup -> {
                 val backup = pendingExport
                 pendingExport = null
-                if (event.uri != null && backup != null) runBackup(isCsv = false) {
-                    backupRepository.save(event.uri, backup)
+                val uri = event.uri ?: return
+                if (backup == null) {
+                    // The vault locked while the picker was open; remove the empty file it created.
+                    viewModelScope.launch { backupRepository.delete(uri) }
+                    return
+                }
+                runBackup(isCsv = false) {
+                    backupRepository.save(uri, backup)
                     BackupDialog.Exported
                 }
             }
@@ -165,7 +171,7 @@ class SettingsViewModel(
 
     /** Shows progress while [action] runs, then the dialog it returns, or the error it throws. */
     private fun runBackup(isCsv: Boolean, action: suspend () -> BackupDialog) {
-        if (_state.value.backupDialog == BackupDialog.Working) return
+        if (_state.value.backupDialog == BackupDialog.Working || session.state.value !is VaultState.Unlocked) return
         showBackupDialog(BackupDialog.Working)
         viewModelScope.launch {
             val next = try {

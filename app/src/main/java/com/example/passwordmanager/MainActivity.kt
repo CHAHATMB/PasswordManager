@@ -1,9 +1,11 @@
 package com.example.passwordmanager
 
+import android.content.ActivityNotFoundException
 import android.os.Build
 import android.os.Bundle
 import android.view.WindowManager
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.biometric.BiometricPrompt
 import androidx.compose.foundation.background
@@ -70,6 +72,11 @@ import com.example.passwordmanager.presentation.LockScreen.LockViewModel
 import com.example.passwordmanager.presentation.LockScreen.SetupScreen
 import com.example.passwordmanager.presentation.LockScreen.UnlockScreen
 import com.example.passwordmanager.presentation.NavigationItem
+import com.example.passwordmanager.presentation.SettingsScreen.BACKUP_FILE_NAME
+import com.example.passwordmanager.presentation.SettingsScreen.BACKUP_MIME_TYPE
+import com.example.passwordmanager.presentation.SettingsScreen.BackupEvent
+import com.example.passwordmanager.presentation.SettingsScreen.BackupPicker
+import com.example.passwordmanager.presentation.SettingsScreen.IMPORT_MIME_TYPES
 import com.example.passwordmanager.presentation.SettingsScreen.SettingsScreen
 import com.example.passwordmanager.presentation.SettingsScreen.SettingsViewModel
 import com.example.passwordmanager.presentation.components.rememberIsKeyboardOpen
@@ -85,6 +92,20 @@ class MainActivity : FragmentActivity() {
     private val lockViewModel by viewModels<LockViewModel> { LockViewModel.Factory }
     private val viewModel by viewModels<CredentialViewModel> { CredentialViewModel.Factory }
     private val settingsViewModel by viewModels<SettingsViewModel> { SettingsViewModel.Factory }
+
+    private val autoLockObserver get() = (application as PasswordManagerApp).container.autoLockObserver
+
+    // Registered on the activity, not in the vault's composition, so a result still arrives after a
+    // lock during the trip (an export then deletes the empty file the picker created).
+    private val saveBackupLauncher = registerForActivityResult(ActivityResultContracts.CreateDocument(BACKUP_MIME_TYPE)) {
+        onBackupPicked(BackupEvent.SaveBackup(it))
+    }
+    private val openBackupLauncher = registerForActivityResult(ActivityResultContracts.OpenDocument()) {
+        onBackupPicked(BackupEvent.OpenBackup(it))
+    }
+    private val openCsvLauncher = registerForActivityResult(ActivityResultContracts.OpenDocument()) {
+        onBackupPicked(BackupEvent.ImportCsv(it))
+    }
 
     private lateinit var biometricPrompt: BiometricPrompt
     // Not saved across recreation: after a rotation mid-prompt the result is simply ignored.
@@ -126,6 +147,25 @@ class MainActivity : FragmentActivity() {
         val cipher = settingsViewModel.newBiometricCipher() ?: return
         isEnablingBiometric = true
         biometricPrompt.authenticate(BiometricPromptUtils.enablePromptInfo(), BiometricPrompt.CryptoObject(cipher))
+    }
+
+    private fun openBackupPicker(picker: BackupPicker) {
+        autoLockObserver.expectAppTrip()
+        try {
+            when (picker) {
+                BackupPicker.SaveBackup -> saveBackupLauncher.launch(BACKUP_FILE_NAME)
+                BackupPicker.OpenBackup -> openBackupLauncher.launch(IMPORT_MIME_TYPES)
+                BackupPicker.OpenCsv -> openCsvLauncher.launch(IMPORT_MIME_TYPES)
+            }
+        } catch (e: ActivityNotFoundException) {
+            autoLockObserver.endAppTrip()
+            settingsViewModel.onBackupEvent(BackupEvent.Dismiss)
+        }
+    }
+
+    private fun onBackupPicked(event: BackupEvent) {
+        autoLockObserver.endAppTrip()
+        settingsViewModel.onBackupEvent(event)
     }
 
     private fun onBiometricAuthenticated(cipher: Cipher) {
@@ -314,7 +354,8 @@ class MainActivity : FragmentActivity() {
                     onBiometricToggle = { enabled ->
                         if (enabled) showEnablePrompt() else settingsViewModel.disableBiometric()
                     },
-                    onBackupEvent = settingsViewModel::onBackupEvent
+                    onBackupEvent = settingsViewModel::onBackupEvent,
+                    onPickBackupFile = ::openBackupPicker
                 )
             }
         }

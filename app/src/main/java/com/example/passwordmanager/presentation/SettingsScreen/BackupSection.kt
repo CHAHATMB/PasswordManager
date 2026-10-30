@@ -1,7 +1,5 @@
 package com.example.passwordmanager.presentation.SettingsScreen
 
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -28,30 +26,17 @@ import com.example.passwordmanager.data.backup.MAX_IMPORT_FILE_MEGABYTES
 import com.example.passwordmanager.presentation.MIN_MASTER_PASSWORD_LENGTH
 import com.example.passwordmanager.presentation.components.PasswordTextField
 
-private const val BACKUP_FILE_NAME = "passwords-export.json"
-private const val BACKUP_MIME_TYPE = "application/json"
-// Any type: files pushed or downloaded often carry a generic MIME type, and a wrong pick gets a clear error.
-private val IMPORT_MIME_TYPES = arrayOf("*/*")
 private val secureDialog = DialogProperties(securePolicy = SecureFlagPolicy.SecureOn)
 
-/** Export and import entries for the Settings screen, with their pickers and dialogs. */
+/** Export and import entries for the Settings screen, with their dialogs. [onPick] opens a file picker. */
 @Composable
-fun BackupSection(dialog: BackupDialog?, onEvent: (BackupEvent) -> Unit) {
-    val saveLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument(BACKUP_MIME_TYPE)) {
-        onEvent(BackupEvent.SaveBackup(it))
-    }
-    val openBackupLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) {
-        onEvent(BackupEvent.OpenBackup(it))
-    }
-    val openCsvLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) {
-        onEvent(BackupEvent.ImportCsv(it))
-    }
+fun BackupSection(dialog: BackupDialog?, onEvent: (BackupEvent) -> Unit, onPick: (BackupPicker) -> Unit) {
 
     Text(text = "Backup", fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onBackground)
     OutlinedButton(onClick = { onEvent(BackupEvent.StartExport) }, modifier = Modifier.fillMaxWidth()) {
         Text(text = "Export encrypted backup")
     }
-    OutlinedButton(onClick = { openBackupLauncher.launch(IMPORT_MIME_TYPES) }, modifier = Modifier.fillMaxWidth()) {
+    OutlinedButton(onClick = { onPick(BackupPicker.OpenBackup) }, modifier = Modifier.fillMaxWidth()) {
         Text(text = "Import backup")
     }
     OutlinedButton(onClick = { onEvent(BackupEvent.StartCsvImport) }, modifier = Modifier.fillMaxWidth()) {
@@ -82,7 +67,7 @@ fun BackupSection(dialog: BackupDialog?, onEvent: (BackupEvent) -> Unit) {
         )
         BackupDialog.ChooseSaveLocation -> LaunchedEffect(Unit) {
             onEvent(BackupEvent.SavePickerOpened)
-            saveLauncher.launch(BACKUP_FILE_NAME)
+            onPick(BackupPicker.SaveBackup)
         }
         is BackupDialog.BackupPassword -> PasswordDialog(
             title = "Import backup",
@@ -106,7 +91,7 @@ fun BackupSection(dialog: BackupDialog?, onEvent: (BackupEvent) -> Unit) {
             confirmButton = {
                 TextButton(onClick = {
                     dismiss()
-                    openCsvLauncher.launch(IMPORT_MIME_TYPES)
+                    onPick(BackupPicker.OpenCsv)
                 }) { Text(text = "Choose file") }
             },
             dismissButton = { TextButton(onClick = dismiss) { Text(text = "Cancel") } }

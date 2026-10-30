@@ -30,7 +30,8 @@ fun SettingsScreen(
     isBiometricAvailable: Boolean,
     onAutoLockTimeoutChange: (AutoLockTimeout) -> Unit,
     onBiometricToggle: (enabled: Boolean) -> Unit,
-    onBackupEvent: (BackupEvent) -> Unit
+    onBackupEvent: (BackupEvent) -> Unit,
+    onPickBackupFile: (BackupPicker) -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -84,7 +85,7 @@ fun SettingsScreen(
                 Text(text = "Couldn't turn on fingerprint unlock. Please try again.", color = MaterialTheme.colorScheme.error)
             }
         }
-        BackupSection(dialog = state.backupDialog, onEvent = onBackupEvent)
+        BackupSection(dialog = state.backupDialog, onEvent = onBackupEvent, onPick = onPickBackupFile)
     }
 }
 
