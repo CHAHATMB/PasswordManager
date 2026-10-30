@@ -263,6 +263,20 @@ class MainActivity : FragmentActivity() {
                     )
                 }
             }
+            composable(
+                CredentialRoutes.EDIT,
+                arguments = listOf(navArgument(CredentialRoutes.ID_ARG) { type = NavType.IntType })
+            ) { entry ->
+                val id = entry.arguments?.getInt(CredentialRoutes.ID_ARG) ?: return@composable
+                val credential by remember(id) { viewModel.credential(id) }.collectAsState(initial = null)
+                credential?.let {
+                    AddCredentialScreen(
+                        onEvent = viewModel::onEvent,
+                        onSaved = { navController.popBackStack(CredentialRoutes.EDIT, inclusive = true) },
+                        editing = it
+                    )
+                }
+            }
             composable(NavigationItem.Settings.route) {
                 LaunchedEffect(Unit) { settingsViewModel.refresh() }
                 val settingsState by settingsViewModel.state.collectAsState()

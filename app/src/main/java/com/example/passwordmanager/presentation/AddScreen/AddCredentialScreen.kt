@@ -32,14 +32,17 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.passwordmanager.data.Credential
 import com.example.passwordmanager.presentation.CredentialEvent
 import com.example.passwordmanager.presentation.components.PasswordTextField
 import com.example.passwordmanager.presentation.isCredentialFormValid
 
+/** Adds a new credential, or edits [editing] in place when it is set. */
 @Composable
 fun AddCredentialScreen(
     onEvent: (CredentialEvent)->Unit,
-    onSaved: () -> Unit
+    onSaved: () -> Unit,
+    editing: Credential? = null
 ) {
     Scaffold (
         topBar = {
@@ -49,7 +52,7 @@ fun AddCredentialScreen(
                 .background(Color.Transparent)
                 .padding(16.dp)
             ){
-                Text(text = "Add",
+                Text(text = if (editing == null) "Add" else "Edit",
                     modifier = Modifier.weight(1f),
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.primary
@@ -59,21 +62,22 @@ fun AddCredentialScreen(
         modifier = Modifier.background(MaterialTheme.colorScheme.background)
 //            .heightIn(min = 600.dp, max = 700.dp)
     ){
-        TextFields(it, onEvent, onSaved)
+        TextFields(it, editing, onEvent, onSaved)
     }
 }
 
 @Composable
 private fun TextFields(
     it: PaddingValues,
+    editing: Credential?,
     onEvent: (CredentialEvent) -> Unit,
     onSaved: () -> Unit,
 ) {
     // Plain remember (not saveable) so typed passwords never land in the saved-state Bundle.
-    var website by remember { mutableStateOf("") }
-    var username by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
-    var note by remember { mutableStateOf("") }
+    var website by remember { mutableStateOf(editing?.website.orEmpty()) }
+    var username by remember { mutableStateOf(editing?.username.orEmpty()) }
+    var password by remember { mutableStateOf(editing?.password.orEmpty()) }
+    var note by remember { mutableStateOf(editing?.note.orEmpty()) }
 
     Column(
         modifier = Modifier
@@ -144,12 +148,18 @@ private fun TextFields(
                 enabled = isCredentialFormValid(website, password),
                 onClick = {
                     onEvent(
-                        CredentialEvent.SaveCredential(
-                            website = website,
-                            username = username,
-                            password = password,
-                            note = note
-                        )
+                        if (editing == null) {
+                            CredentialEvent.SaveCredential(
+                                website = website,
+                                username = username,
+                                password = password,
+                                note = note
+                            )
+                        } else {
+                            CredentialEvent.UpdateCredential(
+                                editing.copy(website = website, username = username, password = password, note = note)
+                            )
+                        }
                     )
                     onSaved()
                 }) {

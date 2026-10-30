@@ -58,6 +58,11 @@ class CredentialViewModel(
                 )
                 write { repository.upsertCredential(credential) }
             }
+            is CredentialEvent.UpdateCredential -> {
+                val credential = event.credential
+                if (!isCredentialFormValid(credential.website, credential.password)) return
+                write { repository.upsertCredential(credential) }
+            }
             is CredentialEvent.SortCredential -> {
                 isSortedByWebsite.value = !isSortedByWebsite.value
             }

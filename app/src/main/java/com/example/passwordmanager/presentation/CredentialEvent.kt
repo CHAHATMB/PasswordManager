@@ -13,6 +13,9 @@ sealed interface CredentialEvent {
         var note: String?
     ): CredentialEvent
 
+    /** [credential] carries the edited fields with the original id and dataCreate. */
+    data class UpdateCredential(val credential: Credential): CredentialEvent
+
     data class FavoriteCredential(var credential: Credential): CredentialEvent
 
     data class CopyUsername(val credential: Credential): CredentialEvent
