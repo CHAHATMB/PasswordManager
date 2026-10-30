@@ -210,7 +210,8 @@ class MainActivity : FragmentActivity() {
                 CredentialScreen(
                     state = state,
                     navController = navController,
-                    onEvent = viewModel::onEvent
+                    onEvent = viewModel::onEvent,
+                    onLock = lockViewModel::lock
                 )
             }
             composable(NavigationItem.Add.route) {

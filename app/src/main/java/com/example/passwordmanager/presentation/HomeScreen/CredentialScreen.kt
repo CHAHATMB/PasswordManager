@@ -17,6 +17,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FavoriteBorder
+import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Sort
 import androidx.compose.material.icons.rounded.Visibility
@@ -49,7 +50,8 @@ private const val PASSWORD_MASK = "••••••••"
 fun CredentialScreen(
     state: CredentialState,
     navController: NavController,
-    onEvent: (CredentialEvent)->Unit
+    onEvent: (CredentialEvent)->Unit,
+    onLock: () -> Unit
 ) {
     Scaffold (
         topBar = {
@@ -70,6 +72,9 @@ fun CredentialScreen(
                 }
                 IconButton(onClick = { navController.navigate(NavigationItem.Settings.route) }) {
                     Icon(imageVector = Icons.Rounded.Settings, contentDescription = "Settings", tint = MaterialTheme.colorScheme.secondary)
+                }
+                IconButton(onClick = onLock) {
+                    Icon(imageVector = Icons.Rounded.Lock, contentDescription = "Lock", tint = MaterialTheme.colorScheme.secondary)
                 }
             }
         }

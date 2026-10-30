@@ -66,6 +66,8 @@ class LockViewModel(
         submitPassword(password, session::unlock)
     }
 
+    fun lock() = session.lock()
+
     /**
      * Returns the DECRYPT cipher for the automatic prompt, once per lock, or null when biometric
      * unlock is off. Turns biometric unlock off if a new enrolment invalidated the key.
