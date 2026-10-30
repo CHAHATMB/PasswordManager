@@ -72,10 +72,17 @@ class SettingsStore(private val prefs: SharedPreferences) {
         _notesLayout.value = layout
     }
 
+    var isOnboardingDone: Boolean
+        get() = prefs.getBoolean(KEY_ONBOARDING_DONE, false)
+        set(value) {
+            prefs.edit().putBoolean(KEY_ONBOARDING_DONE, value).apply()
+        }
+
     companion object {
         const val PREFS_NAME = "settings"
         private const val KEY_AUTO_LOCK_TIMEOUT = "auto_lock_timeout"
         private const val KEY_THEME_MODE = "theme_mode"
         private const val KEY_NOTES_LAYOUT = "notes_layout"
+        private const val KEY_ONBOARDING_DONE = "onboarding_done"
     }
 }
