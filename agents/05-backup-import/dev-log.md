@@ -145,5 +145,33 @@
     15. `adb logcat` during steps 5–12: no master, export or credential passwords, and no file contents.
 
 ## Round 2 (fixes from review/verify)
-- Addressed findings:
-- Commits:
+- Addressed findings (review.md Round 1):
+  - #1 (major): the file pickers now work with auto-lock "Immediately".
+    - `AutoLockObserver.expectAppTrip()` is set right before each picker launch. The next `ON_STOP` consumes it, and the following `ON_START` then uses `shouldLock(..., isAppTrip = true)`. That locks only after `max(timeout, APP_TRIP_MAX_MILLIS = 5 min)`, so an app trip never locks earlier than the user's own timeout.
+    - `endAppTrip()` runs in every picker result (and on `ActivityNotFoundException`), so a picker that returns before `ON_STOP` fires doesn't leave the flag for the next real trip. Screen-off still locks immediately.
+    - The three launchers moved from `BackupSection` (`rememberLauncherForActivityResult` inside the vault composition) to `MainActivity` (`registerForActivityResult`). A result now arrives even if the vault locked during the trip.
+    - A save result with no pending export (the lock dismissed it) deletes the document the picker created. `BackupRepository.save` deletes it on `IOException`/`SecurityException` and rethrows. Deletion uses `DocumentsContract.deleteDocument` and is best effort.
+    - `runBackup` ignores open/import results while locked.
+  - #2: `setIgnoreEmptyLines(true)`. Invalid CSV rows are counted while parsing, not kept. `MAX_IMPORT_FILE_MEGABYTES` is now 5 for both imports, so the error reads "The file is larger than 5 MB." This deviates from the brief's 10 MB, at the coordinator's request.
+  - #3: columns are looked up through one map of trimmed, lowercased header name → index, used for both the required-column check and the value reads. `setIgnoreHeaderCase` was dropped as redundant.
+  - #4: the backup KDF bounds are now parallelism 1–16, memory `8 × parallelism`–131072 KiB (128 MiB), and iterations 1–20. Memory 0 → `Malformed`, shown as "This backup file is damaged." The test KDF params went from memory 0 to 16 KiB.
+  - #5: `readImportFile` wipes the current buffer in `finally` (success, `FileTooLarge` or a read failure). Outgrown buffers are still wiped as before.
+  - #6: no action (already disclosed).
+- Commits (`fa69bf3..HEAD`):
+  - 1d8744b fix: let one app-started picker trip skip auto-lock for up to 5 min
+  - 82bfedf fix: keep picker results across a lock and delete a failed export file
+  - fabda8e fix: skip blank CSV lines, trim headers and cap imports at 5 MB
+  - d0b3d4f fix: reject backup KDF memory below Argon2's minimum or above 128 MiB
+  - plus the `docs:` commit for this log
+- Tests: 132 total, 0 failures (+5):
+  - `AutoLockTest` (+2): an app trip with "Immediately" stays unlocked until 5 min and locks at 5 min; with 15 min it does not lock at 5 min.
+  - `CsvImporterTest` (+2): blank lines are ignored (0 invalid); padded header names (` url `) still match.
+  - `ImportFileTest` (+1, 1 updated): a read failure partway wipes the buffer and propagates `IOException`; the default limit is now 5 MB.
+  - `BackupCryptoTest` (updated): memory 0, memory below 8 × p, and 128 MiB + 1 are `Malformed`.
+- Build/test result: `./gradlew assembleDebug testDebugUnitTest` → PASS.
+- Notes for reviewer/verifier:
+  - Still not run on a device. Manual flow changes:
+    - Step 1: make `big.csv` 6 MB (`head -c 6291456 /dev/zero`), and expect "The file is larger than 5 MB." in step 12.
+    - New check: Settings → "Immediately", then repeat steps 5 and 7 → both work.
+    - Then, with "Immediately", open Export → reach the save picker → wait more than 5 min (or press Power for screen-off) → return and save. The vault locks, and no empty `passwords-export.json` is left in Downloads (`adb shell ls /sdcard/Download`).
+  - Remaining memory risk: up to 5 MB of tiny *valid* rows is still held as `Credential`s (roughly 650 k rows at the smallest). No row cap was added (not requested).
