@@ -22,8 +22,9 @@ abstract class CredentialDatabase: RoomDatabase() {
                 .also { it.openHelper.writableDatabase }
 
         // SQLCipher treats a key of the form x'<64 hex>' as a raw key and skips its own KDF.
-        // Built without a String so the key is never interned. A fresh array per open, since the factory may clear it.
-        private fun sqlCipherRawKey(key: ByteArray): ByteArray {
+        // Built without a String so the key is never interned. The factory keeps this array
+        // (clearPassphrase = false) for the DB's lifetime, so it must be wiped when the vault locks.
+        internal fun sqlCipherRawKey(key: ByteArray): ByteArray {
             val hexDigits = "0123456789abcdef"
             val rawKey = ByteArray(key.size * 2 + 3)
             rawKey[0] = 'x'.code.toByte()
