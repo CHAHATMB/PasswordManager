@@ -72,6 +72,7 @@ import com.example.passwordmanager.presentation.LockScreen.UnlockScreen
 import com.example.passwordmanager.presentation.NavigationItem
 import com.example.passwordmanager.presentation.SettingsScreen.SettingsScreen
 import com.example.passwordmanager.presentation.SettingsScreen.SettingsViewModel
+import com.example.passwordmanager.presentation.components.rememberIsKeyboardOpen
 import com.example.passwordmanager.ui.theme.PasswordManagerTheme
 import com.example.passwordmanager.ui.theme.shapes.BottomNavCustomShape
 import com.example.passwordmanager.util.BiometricPromptUtils
@@ -149,6 +150,7 @@ class MainActivity : FragmentActivity() {
         val navController = rememberNavController()
         val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
         val snackbarHostState = remember { SnackbarHostState() }
+        val isKeyboardOpen = rememberIsKeyboardOpen()
         LaunchedEffect(Unit) {
             // collectLatest: a newer delete replaces the pending Undo instead of queueing behind it.
             viewModel.deletedCredentials.collectLatest { credential ->
@@ -167,8 +169,9 @@ class MainActivity : FragmentActivity() {
             .background(MaterialTheme.colorScheme.background),
             snackbarHost = { SnackbarHost(snackbarHostState) },
             bottomBar = {
-                // Hidden on Edit: with adjustResize the bar and FAB would ride above the keyboard.
-                if (currentRoute != CredentialRoutes.EDIT) MyBottomAppBarWithFab(
+                // Hidden on Edit and while typing (e.g. Home search): with adjustResize the bar and
+                // FAB would ride above the keyboard.
+                if (currentRoute != CredentialRoutes.EDIT && !isKeyboardOpen) MyBottomAppBarWithFab(
                     content = {
                         NavigationBar {
                             listOf(NavigationItem.Home, NavigationItem.Favorite).forEach { item ->
