@@ -18,7 +18,8 @@ fun AppTextField(
     singleLine: Boolean = true,
     trailingIcon: (@Composable () -> Unit)? = null,
     visualTransformation: VisualTransformation = VisualTransformation.None,
-    keyboardOptions: KeyboardOptions = KeyboardOptions.Default
+    keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
+    error: String? = null
 ) {
     OutlinedTextField(
         value = value,
@@ -30,6 +31,8 @@ fun AppTextField(
         visualTransformation = visualTransformation,
         keyboardOptions = keyboardOptions,
         singleLine = singleLine,
+        isError = error != null,
+        supportingText = error?.let { { Text(text = it) } },
         shape = MaterialTheme.shapes.small
     )
 }
