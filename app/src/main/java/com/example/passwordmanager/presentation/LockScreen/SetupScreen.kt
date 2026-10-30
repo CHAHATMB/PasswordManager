@@ -57,11 +57,8 @@ fun SetupScreen(
         )
         Button(
             enabled = !state.isWorking,
-            onClick = {
-                onSetup(password, confirmation)
-                password = ""
-                confirmation = ""
-            }
+            // Not cleared here: a failed setup keeps the fields, and success leaves this screen.
+            onClick = { onSetup(password, confirmation) }
         ) {
             Text(text = "Create vault")
         }
