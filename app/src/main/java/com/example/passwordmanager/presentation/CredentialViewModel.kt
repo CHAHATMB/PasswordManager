@@ -9,6 +9,7 @@ import com.example.passwordmanager.PasswordManagerApp
 import com.example.passwordmanager.data.Credential
 import com.example.passwordmanager.data.CredentialRepository
 import com.example.passwordmanager.data.vault.VaultException
+import com.example.passwordmanager.util.SecureClipboard
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -20,7 +21,10 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalCoroutinesApi::class)
-class CredentialViewModel(private val repository: CredentialRepository) : ViewModel() {
+class CredentialViewModel(
+    private val repository: CredentialRepository,
+    private val clipboard: SecureClipboard
+) : ViewModel() {
 
     private val isSortedByWebsite = MutableStateFlow(false)
 
@@ -58,6 +62,9 @@ class CredentialViewModel(private val repository: CredentialRepository) : ViewMo
                 write { repository.upsertCredential(event.credential.copy(isFav = !event.credential.isFav)) }
             }
 
+            is CredentialEvent.CopyUsername -> clipboard.copy(event.credential.username)
+            is CredentialEvent.CopyPassword -> clipboard.copy(event.credential.password)
+
             is CredentialEvent.OnSearchTextChange -> {
                 _searchText.value = event.text
             }
@@ -77,7 +84,8 @@ class CredentialViewModel(private val repository: CredentialRepository) : ViewMo
     companion object {
         val Factory = viewModelFactory {
             initializer {
-                CredentialViewModel((this[APPLICATION_KEY] as PasswordManagerApp).container.credentialRepository)
+                val container = (this[APPLICATION_KEY] as PasswordManagerApp).container
+                CredentialViewModel(container.credentialRepository, container.secureClipboard)
             }
         }
     }

@@ -15,5 +15,8 @@ sealed interface CredentialEvent {
 
     data class FavoriteCredential(var credential: Credential): CredentialEvent
 
+    data class CopyUsername(val credential: Credential): CredentialEvent
+    data class CopyPassword(val credential: Credential): CredentialEvent
+
     data class OnSearchTextChange(val text: String): CredentialEvent
 }

@@ -15,6 +15,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Clear
+import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FavoriteBorder
@@ -38,6 +39,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -46,6 +48,7 @@ import com.example.passwordmanager.data.Credential
 import com.example.passwordmanager.presentation.CredentialEvent
 import com.example.passwordmanager.presentation.CredentialState
 import com.example.passwordmanager.presentation.NavigationItem
+import com.example.passwordmanager.presentation.components.showCopiedMessage
 
 private const val PASSWORD_MASK = "••••••••"
 
@@ -124,6 +127,7 @@ private fun SearchField(text: String, onTextChange: (String) -> Unit) {
 @Composable
 fun CredentialItem(credential: Credential, onEvent: (CredentialEvent) -> Unit) {
     var isPasswordRevealed by remember(credential.id) { mutableStateOf(false) }
+    val context = LocalContext.current
     Row(modifier= Modifier
         .fillMaxWidth()
         .clip(RoundedCornerShape(10.dp))
@@ -141,6 +145,12 @@ fun CredentialItem(credential: Credential, onEvent: (CredentialEvent) -> Unit) {
             )
         }
         Row(){
+            IconButton(onClick = {
+                onEvent(CredentialEvent.CopyPassword(credential))
+                showCopiedMessage(context, "Password")
+            }) {
+                Icon(imageVector = Icons.Rounded.ContentCopy, contentDescription = "Copy password", modifier = Modifier.size(24.dp))
+            }
             IconButton(onClick = { isPasswordRevealed = !isPasswordRevealed }) {
                 Icon(
                     imageVector = if (isPasswordRevealed) Icons.Rounded.VisibilityOff else Icons.Rounded.Visibility,
