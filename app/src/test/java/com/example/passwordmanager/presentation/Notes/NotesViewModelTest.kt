@@ -100,6 +100,63 @@ class NotesViewModelTest {
     }
 
     @Test
+    fun newNoteTitleFollowsTheBodyAndIsSaved() = runTest {
+        val viewModel = newUnlockedViewModel()
+        viewModel.openEditor(NoteRoutes.NEW_NOTE_ID)
+
+        viewModel.onEvent(NotesEvent.ChangeBody("Wifi"))
+        println("After 'Wifi': '${viewModel.editor?.title}'")
+        assertEquals("Wifi · 30 Oct 2026", viewModel.editor?.title)
+        viewModel.onEvent(NotesEvent.ChangeBody("Wifi router admin"))
+        assertEquals("Wifi router admin · 30 Oct 2026", viewModel.editor?.title)
+        viewModel.onEvent(NotesEvent.CloseEditor)
+
+        assertEquals("Wifi router admin · 30 Oct 2026", repository.getAll().single().title)
+    }
+
+    @Test
+    fun blankBodyGivesAnEmptyAutoTitleAndIsDiscarded() = runTest {
+        val viewModel = newUnlockedViewModel()
+        viewModel.openEditor(NoteRoutes.NEW_NOTE_ID)
+
+        viewModel.onEvent(NotesEvent.ChangeBody("Wifi"))
+        viewModel.onEvent(NotesEvent.ChangeBody(" \n"))
+        assertEquals("", viewModel.editor?.title)
+        viewModel.onEvent(NotesEvent.CloseEditor)
+
+        assertEquals(emptyList<Note>(), repository.getAll())
+    }
+
+    @Test
+    fun typedTitleStopsTrackingAndClearingItResumes() = runTest {
+        val viewModel = newUnlockedViewModel()
+        viewModel.openEditor(NoteRoutes.NEW_NOTE_ID)
+        viewModel.onEvent(NotesEvent.ChangeBody("Wifi"))
+
+        viewModel.onEvent(NotesEvent.ChangeTitle("Router"))
+        viewModel.onEvent(NotesEvent.ChangeBody("Wifi router admin"))
+        assertEquals("Router", viewModel.editor?.title)
+
+        viewModel.onEvent(NotesEvent.ChangeTitle(""))
+        assertEquals("", viewModel.editor?.title)
+        viewModel.onEvent(NotesEvent.ChangeBody("Bank PINs"))
+        println("After clearing the title: '${viewModel.editor?.title}'")
+        assertEquals("Bank PINs · 30 Oct 2026", viewModel.editor?.title)
+    }
+
+    @Test
+    fun openedNoteTitleDoesNotFollowTheBody() = runTest {
+        val viewModel = newUnlockedViewModel()
+        repository.upsertNote(Note(title = "Wifi", body = "box", createdAt = 1, updatedAt = 1))
+        viewModel.openEditor(repository.getAll().single().id)
+
+        viewModel.onEvent(NotesEvent.ChangeBody("Completely different"))
+
+        assertEquals("Wifi", viewModel.editor?.title)
+        assertFalse(viewModel.editor!!.isTitleAuto)
+    }
+
+    @Test
     fun typedTitleIsKeptAndNotReDerivedWhenTheBodyChanges() = runTest {
         val viewModel = newUnlockedViewModel()
         viewModel.write(NoteRoutes.NEW_NOTE_ID, title = " Bank PINs ", body = "card 1234")
