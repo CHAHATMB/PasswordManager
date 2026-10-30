@@ -11,6 +11,7 @@ import javax.crypto.Cipher
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.encodeToJsonElement
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
@@ -32,7 +33,11 @@ class BackupCryptoTest {
         BackupTotp("Example", "alice@example.com", "JBSWY3DPEHPK3PXP", "SHA1", digits = 6, period = 30, created = 3),
         BackupTotp("ACME Co", "bob", "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ", "SHA256", digits = 8, period = 60, created = 4)
     )
-    private val content = BackupContent(items, totp)
+    private val notes = listOf(
+        BackupNote("Wifi router admin · 30 Oct 2026", "Wifi router admin\npassword is on the box", created = 5, updated = 6),
+        BackupNote("Keys \uD83D\uDD11", "\"quoted\" and \\ back\tslash", created = 7, updated = 7)
+    )
+    private val content = BackupContent(items, totp, notes)
 
     @Test
     fun exportThenImportRestoresEqualItems() {
@@ -40,7 +45,7 @@ class BackupCryptoTest {
 
         val restored = crypto.decrypt(crypto.parse(file), password.toCharArray())
 
-        println("Restored ${restored.credentials.size} credentials and ${restored.totp}")
+        println("Restored ${restored.credentials.size} credentials, ${restored.totp} and ${restored.notes}")
         assertEquals(content, restored)
         assertEquals(2, crypto.parse(file).header.version)
     }
@@ -49,7 +54,18 @@ class BackupCryptoTest {
     fun version1FileWithAnArrayPayloadStillDecrypts() {
         val restored = crypto.decrypt(crypto.parse(version1File(items)), password.toCharArray())
 
-        assertEquals(BackupContent(items, totp = emptyList()), restored)
+        assertEquals(BackupContent(items, totp = emptyList(), notes = emptyList()), restored)
+    }
+
+    @Test
+    fun version2FileWithoutNotesStillDecryptsToNoNotes() {
+        // As the 09 and 10 builds wrote it: no `notes` field.
+        val payload = Json.encodeToString(mapOf("credentials" to Json.encodeToJsonElement(items), "totp" to Json.encodeToJsonElement(totp)))
+        println("Old payload: ${payload.take(80)}…")
+
+        val restored = crypto.decrypt(crypto.parse(encryptedFile(BACKUP_VERSION, payload)), password.toCharArray())
+
+        assertEquals(BackupContent(items, totp, notes = emptyList()), restored)
     }
 
     @Test
@@ -82,7 +98,7 @@ class BackupCryptoTest {
         val text = crypto.encrypt(content, password.toCharArray(), params).decodeToString()
 
         assertTrue(text, text.contains("\"format\":\"pm-export\""))
-        listOf("github.com", "alice", "gh-secret-1", "line one", "bob@example.com", "p@ss,word", "JBSWY3DPEHPK3PXP", "ACME").forEach {
+        listOf("github.com", "alice", "gh-secret-1", "line one", "bob@example.com", "p@ss,word", "JBSWY3DPEHPK3PXP", "ACME", "Wifi router", "on the box").forEach {
             assertFalse("File leaks '$it'", text.contains(it))
         }
     }
@@ -172,15 +188,19 @@ class BackupCryptoTest {
     }
 
     /** A file as the 08 build wrote it: version 1, the payload a bare array of items. */
-    private fun version1File(items: List<BackupItem>): ByteArray {
+    private fun version1File(items: List<BackupItem>): ByteArray =
+        encryptedFile(BACKUP_VERSION_CREDENTIALS_ONLY, Json.encodeToString(items))
+
+    /** A file with [payload] encrypted exactly as [BackupCrypto.encrypt] does, labelled [version]. */
+    private fun encryptedFile(version: Int, payload: String): ByteArray {
         val encoder = Base64.getEncoder()
         val salt = ByteArray(SALT_SIZE_BYTES) { it.toByte() }
         val iv = ByteArray(IV_SIZE_BYTES) { it.toByte() }
         val kdf = BackupKdf(BACKUP_KDF_TYPE, params.memoryKib, params.iterations, params.parallelism, encoder.encodeToString(salt))
-        val header = BackupHeader(BACKUP_FORMAT, BACKUP_VERSION_CREDENTIALS_ONLY, kdf, BACKUP_CIPHER, encoder.encodeToString(iv))
+        val header = BackupHeader(BACKUP_FORMAT, version, kdf, BACKUP_CIPHER, encoder.encodeToString(iv))
         val key = Pbkdf2KeyDerivation().derivePasswordKey(password.toCharArray(), salt, params)
         val ciphertext = aesGcmCipher(Cipher.ENCRYPT_MODE, key, iv, Json.encodeToString(header).encodeToByteArray())
-            .doFinal(Json.encodeToString(items).encodeToByteArray())
+            .doFinal(payload.encodeToByteArray())
         val file = BackupFile(header.format, header.version, kdf, header.cipher, header.iv, encoder.encodeToString(ciphertext))
         return Json.encodeToString(file).encodeToByteArray()
     }

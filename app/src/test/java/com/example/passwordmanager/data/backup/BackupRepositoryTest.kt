@@ -11,6 +11,9 @@ import com.example.passwordmanager.data.crypto.KdfParams
 import com.example.passwordmanager.data.crypto.Pbkdf2KeyDerivation
 import com.example.passwordmanager.data.crypto.TEST_KDF_PARAMS
 import com.example.passwordmanager.data.crypto.VaultCrypto
+import com.example.passwordmanager.data.notes.Note
+import com.example.passwordmanager.data.notes.NoteRepository
+import com.example.passwordmanager.data.notes.note
 import com.example.passwordmanager.data.totp.TotpRepository
 import com.example.passwordmanager.data.totp.totpAccount
 import com.example.passwordmanager.util.totp.TotpAlgorithm
@@ -41,6 +44,10 @@ class BackupRepositoryTest {
     private val savedTotp = listOf(
         totpAccount("Example", "alice@example.com", "JBSWY3DPEHPK3PXP", createdAt = 3),
         totpAccount("ACME Co", "bob", "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ", TotpAlgorithm.SHA256, digits = 8, period = 60, createdAt = 4)
+    )
+    private val savedNotes = listOf(
+        note("Wifi router admin · 30 Oct 2026", "Wifi router admin\npassword is on the box", createdAt = 5, updatedAt = 8),
+        note("Bank PINs", "card 1234", createdAt = 6, updatedAt = 6)
     )
 
     @After
@@ -102,6 +109,42 @@ class BackupRepositoryTest {
     }
 
     @Test
+    fun backupRestoresNotesWithTheirDatesAndReimportIsAllDuplicates() = runTest {
+        val source = unlockedVault(VAULT_NAMES[0])
+        source.credentials.insertSkippingDuplicates(saved)
+        source.totp.insertSkippingDuplicates(savedTotp)
+        source.notes.insertSkippingDuplicates(savedNotes)
+        val backupUri = register("backup.json", source.backup.createBackup(backupPassword.toCharArray()))
+
+        val target = unlockedVault(VAULT_NAMES[1])
+        target.notes.insertSkippingDuplicates(listOf(note("Local only", "kept")))
+        val restored = target.backup.importBackup(target.backup.readBackup(backupUri), backupPassword.toCharArray())
+        val again = target.backup.importBackup(target.backup.readBackup(backupUri), backupPassword.toCharArray())
+
+        println("Notes restore ${restored.notesCounts()}, again ${again.notesCounts()}")
+        assertEquals(2 to 0, restored.notesCounts())
+        assertEquals(0 to 2, again.notesCounts())
+        assertEquals(Triple(2, 0, 0), restored.counts())
+        assertEquals(Triple(2, 0, 0), restored.totpCounts())
+        assertEquals(listOf(note("Local only", "kept")) + savedNotes, target.notes.getAll().map { it.copy(id = 0) })
+    }
+
+    @Test
+    fun backupWithoutNotesImportsCredentialsAndTotpAndNoNotes() = runTest {
+        val source = unlockedVault(VAULT_NAMES[0])
+        source.credentials.insertSkippingDuplicates(saved)
+        source.totp.insertSkippingDuplicates(savedTotp)
+        val backupUri = register("backup.json", source.backup.createBackup(backupPassword.toCharArray()))
+
+        val target = unlockedVault(VAULT_NAMES[1])
+        val restored = target.backup.importBackup(target.backup.readBackup(backupUri), backupPassword.toCharArray())
+
+        assertEquals(0 to 0, restored.notesCounts())
+        assertEquals(Triple(2, 0, 0), restored.counts())
+        assertEquals(emptyList<Note>(), target.notes.getAll())
+    }
+
+    @Test
     fun wrongBackupPasswordImportsNothing() = runTest {
         val (source, sourceCredentials) = unlockedVault(VAULT_NAMES[0])
         sourceCredentials.insertSkippingDuplicates(saved)
@@ -130,7 +173,14 @@ class BackupRepositoryTest {
 
     private fun ImportResult.totpCounts() = Triple(totpImported, totpDuplicates, totpInvalid)
 
-    private data class Vault(val backup: BackupRepository, val credentials: CredentialRepository, val totp: TotpRepository)
+    private fun ImportResult.notesCounts() = notesImported to notesDuplicates
+
+    private data class Vault(
+        val backup: BackupRepository,
+        val credentials: CredentialRepository,
+        val totp: TotpRepository,
+        val notes: NoteRepository
+    )
 
     private fun register(name: String, bytes: ByteArray): Uri {
         val uri = Uri.parse("content://test/$name")
@@ -159,10 +209,11 @@ class BackupRepositoryTest {
         session.setup("correct horse battery staple".toCharArray())
         val credentials = CredentialRepository(session)
         val totp = TotpRepository(session)
+        val notes = NoteRepository(session)
         // Within the bounds BackupCrypto.parse enforces; the PBKDF2 stand-in reads iterations only.
         val backupParams = KdfParams(memoryKib = 16, iterations = 10, parallelism = 1)
-        val backup = BackupRepository(context.contentResolver, credentials, totp, BackupCrypto(Pbkdf2KeyDerivation()), backupParams) { now }
-        return Vault(backup, credentials, totp)
+        val backup = BackupRepository(context.contentResolver, credentials, totp, notes, BackupCrypto(Pbkdf2KeyDerivation()), backupParams) { now }
+        return Vault(backup, credentials, totp, notes)
     }
 
     private companion object {
