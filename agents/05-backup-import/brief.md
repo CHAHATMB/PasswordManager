@@ -31,7 +31,7 @@ Users can save a password-protected encrypted backup file and restore it on a fr
     - Website comes from the URL, falling back to the name.
     - Rows with no password are invalid.
     - Same transaction and reporting as the backup import.
-  - Rejects files over 10 MB. An unknown format or missing required headers gives a specific error message.
+  - Rejects files over 5 MB. An unknown format or missing required headers gives a specific error message.
   - JSON uses `kotlinx.serialization` (D5).
 - Out:
   - Plaintext CSV export.
@@ -47,7 +47,7 @@ Users can save a password-protected encrypted backup file and restore it on a fr
 - [ ] Importing the same file again imports 0 and reports every row as a duplicate.
 - [ ] `adb push` a GPM-format CSV whose rows include commas, quotes and a newline in a note, and one row with no password. Import CSV shows the warning, then imports the valid rows with exact values and reports 1 invalid.
 - [ ] A Bitwarden-format CSV imports its login rows correctly, including favourites.
-- [ ] Choosing a non-CSV file, or a file over 10 MB, shows an error, and nothing is imported.
+- [ ] Choosing a non-CSV file, or a file over 5 MB, shows an error, and nothing is imported.
 
 ## Design notes
 - Affected files/layers:
