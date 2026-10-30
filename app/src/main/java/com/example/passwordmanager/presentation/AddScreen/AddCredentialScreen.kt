@@ -34,6 +34,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.passwordmanager.data.Credential
 import com.example.passwordmanager.presentation.CredentialEvent
+import com.example.passwordmanager.presentation.components.PasswordStrengthIndicator
 import com.example.passwordmanager.presentation.components.PasswordTextField
 import com.example.passwordmanager.presentation.isCredentialFormValid
 
@@ -114,14 +115,15 @@ private fun TextFields(
             },
             textStyle = TextStyle(fontWeight = FontWeight.SemiBold, fontSize = 18.sp)
         )
-        PasswordTextField(
-            value = password,
-            onValueChange = { password = it },
-            placeholder = "Password",
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
-        )
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            PasswordTextField(
+                value = password,
+                onValueChange = { password = it },
+                placeholder = "Password",
+                modifier = Modifier.fillMaxWidth()
+            )
+            if (password.isNotEmpty()) PasswordStrengthIndicator(password = password)
+        }
         OutlinedTextField(
             value = note, onValueChange = {
                 note = it

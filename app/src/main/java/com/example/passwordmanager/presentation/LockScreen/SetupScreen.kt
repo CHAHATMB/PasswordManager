@@ -12,7 +12,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import com.example.passwordmanager.presentation.MIN_MASTER_PASSWORD_LENGTH
+import com.example.passwordmanager.presentation.components.PasswordStrengthIndicator
 import com.example.passwordmanager.presentation.components.PasswordTextField
+import com.example.passwordmanager.util.PasswordStrength
 
 @Composable
 fun SetupScreen(
@@ -36,6 +38,16 @@ fun SetupScreen(
             modifier = Modifier.fillMaxWidth(),
             enabled = !state.isWorking
         )
+        if (password.isNotEmpty()) {
+            val isWeak = remember(password) { PasswordStrength.of(password) == PasswordStrength.Weak }
+            PasswordStrengthIndicator(password = password, modifier = Modifier.fillMaxWidth())
+            if (isWeak) {
+                Text(
+                    text = "This password is easy to guess. Use a longer one with mixed characters.",
+                    color = MaterialTheme.colorScheme.error
+                )
+            }
+        }
         PasswordTextField(
             value = confirmation,
             onValueChange = { confirmation = it },
