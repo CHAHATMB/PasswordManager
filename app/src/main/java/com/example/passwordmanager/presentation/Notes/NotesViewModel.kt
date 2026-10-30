@@ -73,7 +73,7 @@ class NotesViewModel(
         }
     }
 
-    /** The title a blank title field becomes on save. */
+    /** The title derived from [body]: an auto title follows it, and a blank title becomes it on save. */
     fun autoTitle(body: String): String = deriveNoteTitle(body, LocalDate.now(clock), locale())
 
     /**
@@ -103,8 +103,16 @@ class NotesViewModel(
         when (event) {
             is NotesEvent.OnSearchTextChange -> _searchText.value = event.text
             // Ignored once closed, so a late change can't reopen the editor.
-            is NotesEvent.ChangeTitle -> editor = editor?.copy(title = limitLength(event.title, NOTE_TITLE_MAX_CHARS))
-            is NotesEvent.ChangeBody -> editor = editor?.copy(body = limitLength(event.body, NOTE_BODY_MAX_CHARS))
+            is NotesEvent.ChangeTitle -> editor = editor?.copy(
+                title = limitLength(event.title, NOTE_TITLE_MAX_CHARS),
+                isTitleAuto = event.title.isEmpty()
+            )
+            is NotesEvent.ChangeBody -> editor = editor?.let { open ->
+                val body = limitLength(event.body, NOTE_BODY_MAX_CHARS)
+                // A blank body keeps the auto title empty, so an untouched new note is still discarded.
+                val title = if (!open.isTitleAuto) open.title else if (body.isBlank()) "" else autoTitle(body)
+                open.copy(title = title, body = body)
+            }
             NotesEvent.CloseEditor -> {
                 val note = editor?.toNoteToSave(clock.millis(), ::autoTitle)
                 editor = null

@@ -9,9 +9,12 @@ data class NotesState(
     val isLoaded: Boolean = false
 )
 
-/** The open editor's input. [original] is the stored note, null for a new one. */
-data class NoteEditor(val original: Note?, val title: String, val body: String) {
-    constructor(note: Note?) : this(note, note?.title.orEmpty(), note?.body.orEmpty())
+/**
+ * The open editor's input. [original] is the stored note, null for a new one. While [isTitleAuto], the title
+ * follows the body; it is true for a new note and whenever the title is cleared.
+ */
+data class NoteEditor(val original: Note?, val title: String, val body: String, val isTitleAuto: Boolean) {
+    constructor(note: Note?) : this(note, note?.title.orEmpty(), note?.body.orEmpty(), isTitleAuto = note == null)
 
     /**
      * The note to save, or null when there is nothing to save: a new note with a blank title and body,
