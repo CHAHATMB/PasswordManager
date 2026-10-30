@@ -25,7 +25,7 @@ screenshots/<NN-feature-slug>/   PNGs captured by the verifier
 2. **Develop** – developer implements, writes unit tests for critical business logic, commits, fills `dev-log.md`.
 3. **Review** – reviewer (fresh context) reads the diff of the feature's commits, writes `review.md`.
    Verdict `CHANGES_REQUESTED` → developer fixes (new `fix:` commits) → re-review. Max 3 rounds.
-4. **Verify** – verifier builds, installs on the emulator, tests only the flows touched by the feature's code changes (no broad regression pass), saves a few screenshots of the finished feature only (not every step), writes `verify.md`.
+4. **Verify** – verifier builds, installs on the emulator, tests only the flows touched by the feature's code changes (no broad regression pass), runs only the unit test classes the feature added or changed (`./gradlew testDebugUnitTest --tests '<Class>'`), saves 1–2 screenshots of the finished feature as proof (not every step), writes `verify.md`.
    Failures go back to the developer.
 5. Orchestrator marks the feature `DONE` in `BACKLOG.md`.
 
