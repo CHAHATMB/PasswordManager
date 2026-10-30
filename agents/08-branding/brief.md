@@ -1,6 +1,6 @@
 # Branding: Vaultly
 
-Status: PLANNED
+Status: IN_REVIEW
 Backlog ID: 08
 
 ## Goal
