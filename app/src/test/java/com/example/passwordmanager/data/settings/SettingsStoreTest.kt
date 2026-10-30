@@ -40,4 +40,27 @@ class SettingsStoreTest {
 
         assertEquals(AutoLockTimeout.DEFAULT, SettingsStore(prefs).autoLockTimeout)
     }
+
+    @Test
+    fun defaultThemeModeIsSystem() {
+        assertEquals(ThemeMode.SYSTEM, SettingsStore(prefs).themeMode.value)
+    }
+
+    @Test
+    fun everyThemeModeSurvivesRoundTrip() {
+        ThemeMode.entries.forEach { mode ->
+            val store = SettingsStore(prefs)
+            store.setThemeMode(mode)
+
+            assertEquals("observed by the same store", mode, store.themeMode.value)
+            assertEquals("read back by a new store", mode, SettingsStore(prefs).themeMode.value)
+        }
+    }
+
+    @Test
+    fun unknownStoredThemeModeFallsBackToSystem() {
+        prefs.edit().putString("theme_mode", "SEPIA").commit()
+
+        assertEquals(ThemeMode.SYSTEM, SettingsStore(prefs).themeMode.value)
+    }
 }
