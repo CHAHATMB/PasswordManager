@@ -21,4 +21,6 @@ data class NoteSummary(
     val title: String,
     val preview: String,
     val updatedAt: Long
-)
+) {
+    override fun toString() = "NoteSummary(id=$id, updatedAt=$updatedAt)"
+}
