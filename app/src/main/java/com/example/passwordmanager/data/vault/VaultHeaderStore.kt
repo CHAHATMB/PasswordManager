@@ -60,11 +60,16 @@ class VaultHeaderStore(private val prefs: SharedPreferences) {
         if (!editor.commit()) throw IOException("Failed to write vault header")
     }
 
-    // Optional: an incomplete biometric blob counts as "biometrics off" so the master password still works.
+    // Optional: an incomplete or garbled biometric blob counts as "biometrics off" so the
+    // master password still works.
     private fun loadBiometric(): BiometricWrappedKey? {
         val iv = prefs.getString(KEY_BIO_IV, null) ?: return null
         val wrappedKey = prefs.getString(KEY_WRAPPED_KEY_BIO, null) ?: return null
-        return BiometricWrappedKey(decoder.decode(iv), decoder.decode(wrappedKey))
+        return try {
+            BiometricWrappedKey(decoder.decode(iv), decoder.decode(wrappedKey))
+        } catch (e: IllegalArgumentException) {
+            null
+        }
     }
 
     private fun requireInt(key: String): Int {

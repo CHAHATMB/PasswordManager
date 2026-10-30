@@ -81,6 +81,17 @@ class VaultHeaderStoreTest {
     }
 
     @Test
+    fun garbledBiometricBase64LoadsAsDisabled() {
+        store.save(header.withBiometric(BiometricWrappedKey(ByteArray(12), ByteArray(48))))
+        prefs.edit().putString("bio_iv", "not base64 !!").commit()
+
+        val loaded = store.load()!!
+
+        assertNull("Bad biometric Base64 must not mark the header corrupt", loaded.biometric)
+        assertArrayEquals(header.wrappedKey, loaded.wrappedKey)
+    }
+
+    @Test
     fun incompleteBiometricBlobLoadsAsDisabled() {
         store.save(header.withBiometric(BiometricWrappedKey(ByteArray(12), ByteArray(48))))
         prefs.edit().remove("wrapped_vk_bio").commit()
