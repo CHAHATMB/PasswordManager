@@ -14,16 +14,19 @@ abstract class CredentialDatabase: RoomDatabase() {
         const val VAULT_DB_NAME = "vault.db"
         const val LEGACY_DB_NAME = "credential.db"
 
-        /** Blocking: opens the DB immediately so a bad key fails here rather than on the first query. */
-        fun openEncrypted(context: Context, vaultKey: ByteArray): CredentialDatabase =
+        /**
+         * Blocking: opens the DB immediately so a bad key fails here rather than on the first query.
+         * [databaseKey] comes from [sqlCipherRawKey]; the factory keeps a reference to it
+         * (clearPassphrase = false) for the DB's lifetime, so the caller wipes it after closing.
+         */
+        fun openEncrypted(context: Context, databaseKey: ByteArray): CredentialDatabase =
             Room.databaseBuilder(context, CredentialDatabase::class.java, VAULT_DB_NAME)
-                .openHelperFactory(SupportOpenHelperFactory(sqlCipherRawKey(vaultKey)))
+                .openHelperFactory(SupportOpenHelperFactory(databaseKey))
                 .build()
                 .also { it.openHelper.writableDatabase }
 
         // SQLCipher treats a key of the form x'<64 hex>' as a raw key and skips its own KDF.
-        // Built without a String so the key is never interned. The factory keeps this array
-        // (clearPassphrase = false) for the DB's lifetime, so it must be wiped when the vault locks.
+        // Built without a String so the key is never interned.
         internal fun sqlCipherRawKey(key: ByteArray): ByteArray {
             val hexDigits = "0123456789abcdef"
             val rawKey = ByteArray(key.size * 2 + 3)

@@ -5,6 +5,7 @@ import android.content.Context
 import com.example.passwordmanager.data.CredentialDatabase
 import com.example.passwordmanager.data.CredentialRepository
 import com.example.passwordmanager.data.crypto.Argon2KeyDerivation
+import com.example.passwordmanager.data.crypto.BiometricKeyStore
 import com.example.passwordmanager.data.crypto.KdfParams
 import com.example.passwordmanager.data.crypto.VaultCrypto
 import com.example.passwordmanager.data.vault.VaultHeaderStore
@@ -13,6 +14,8 @@ import com.example.passwordmanager.data.vault.VaultSession
 class AppContainer(context: Context) {
 
     private val appContext = context.applicationContext
+
+    val biometricKeyStore = BiometricKeyStore()
 
     val vaultSession = VaultSession(
         headerStore = VaultHeaderStore(
@@ -24,11 +27,12 @@ class AppContainer(context: Context) {
         } else {
             KdfParams.DEFAULT
         },
-        openDatabase = { vaultKey -> CredentialDatabase.openEncrypted(appContext, vaultKey) },
+        openDatabase = { databaseKey -> CredentialDatabase.openEncrypted(appContext, databaseKey) },
         deleteDatabases = {
             appContext.deleteDatabase(CredentialDatabase.LEGACY_DB_NAME)
             appContext.deleteDatabase(CredentialDatabase.VAULT_DB_NAME)
-        }
+        },
+        deleteBiometricKey = biometricKeyStore::deleteKey
     )
 
     val credentialRepository = CredentialRepository(vaultSession)

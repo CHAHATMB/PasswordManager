@@ -109,7 +109,8 @@ class CredentialRepositoryTest {
                 .build()
                 .also { openedDatabases += it }
         },
-        deleteDatabases = { context.deleteDatabase(TEST_DB_NAME) }
+        deleteDatabases = { context.deleteDatabase(TEST_DB_NAME) },
+        deleteBiometricKey = {}
     )
 
     private fun credential(website: String) = Credential(

@@ -111,6 +111,7 @@ class LockViewModelTest {
         crypto = VaultCrypto(Pbkdf2KeyDerivation()),
         kdfParams = TEST_KDF_PARAMS,
         openDatabase = openDatabase,
-        deleteDatabases = {}
+        deleteDatabases = {},
+        deleteBiometricKey = {}
     )
 }
