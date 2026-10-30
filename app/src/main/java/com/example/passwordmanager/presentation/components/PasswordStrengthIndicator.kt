@@ -15,7 +15,11 @@ import com.example.passwordmanager.util.PasswordStrength
 
 @Composable
 fun PasswordStrengthIndicator(password: String, modifier: Modifier = Modifier) {
-    val strength = remember(password) { PasswordStrength.of(password) }
+    PasswordStrengthIndicator(strength = remember(password) { PasswordStrength.of(password) }, modifier = modifier)
+}
+
+@Composable
+fun PasswordStrengthIndicator(strength: PasswordStrength, modifier: Modifier = Modifier) {
     val color = strength.color()
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(4.dp)) {
         LinearProgressIndicator(

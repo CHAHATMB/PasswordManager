@@ -39,9 +39,9 @@ fun SetupScreen(
             enabled = !state.isWorking
         )
         if (password.isNotEmpty()) {
-            val isWeak = remember(password) { PasswordStrength.of(password) == PasswordStrength.Weak }
-            PasswordStrengthIndicator(password = password, modifier = Modifier.fillMaxWidth())
-            if (isWeak) {
+            val strength = remember(password) { PasswordStrength.of(password) }
+            PasswordStrengthIndicator(strength = strength, modifier = Modifier.fillMaxWidth())
+            if (strength == PasswordStrength.Weak) {
                 Text(
                     text = "This password is easy to guess. Use a longer one with mixed characters.",
                     color = MaterialTheme.colorScheme.error
