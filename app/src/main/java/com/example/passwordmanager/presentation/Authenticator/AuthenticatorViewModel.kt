@@ -16,6 +16,8 @@ import com.example.passwordmanager.data.vault.VaultState
 import com.example.passwordmanager.presentation.isTotpEditValid
 import com.example.passwordmanager.util.QrImageReader
 import com.example.passwordmanager.util.SecureClipboard
+import com.example.passwordmanager.util.totp.MigrationPayload
+import com.example.passwordmanager.util.totp.MigrationResult
 import com.example.passwordmanager.util.totp.OtpAuthResult
 import com.example.passwordmanager.util.totp.OtpAuthUri
 import kotlinx.coroutines.Dispatchers
@@ -29,7 +31,6 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 private const val MILLIS_PER_SECOND = 1000L
-private const val GOOGLE_MIGRATION_SCHEME = "otpauth-migration:"
 
 class AuthenticatorViewModel(
     private val repository: TotpRepository,
@@ -91,7 +92,7 @@ class AuthenticatorViewModel(
                 // The vault may have locked while the scanner was open (screen off); drop the result.
                 if (vaultState.value !is VaultState.Unlocked) return
                 dialog = when {
-                    event.text != null -> scannedDialog(event.text)
+                    event.text != null -> scannedDialog(event.text, ScanSource.Camera)
                     event.isCameraPermissionMissing -> AuthenticatorDialog.Failed(ScanError.CameraPermissionDenied)
                     else -> null
                 }
@@ -103,13 +104,29 @@ class AuthenticatorViewModel(
                 viewModelScope.launch {
                     val text = qrImageReader.read(uri)
                     if (vaultState.value !is VaultState.Unlocked || dialog != AuthenticatorDialog.Scanning) return@launch
-                    dialog = if (text == null) AuthenticatorDialog.Failed(ScanError.NoQrCodeInImage) else scannedDialog(text)
+                    dialog = if (text == null) AuthenticatorDialog.Failed(ScanError.NoQrCodeInImage) else scannedDialog(text, ScanSource.Image)
                 }
             }
             AuthenticatorEvent.SaveScanned -> {
                 val account = (dialog as? AuthenticatorDialog.ConfirmScanned)?.account ?: return
                 dialog = null
                 write { repository.upsertAccount(account) }
+            }
+            AuthenticatorEvent.OpenGoogleImport -> dialog = AuthenticatorDialog.GoogleImportHelp
+            AuthenticatorEvent.ImportMigration -> {
+                val preview = dialog as? AuthenticatorDialog.ImportPreview ?: return
+                dialog = null
+                val batch = preview.batch
+                viewModelScope.launch {
+                    val createdAt = clock()
+                    val imported = try {
+                        repository.insertSkippingDuplicates(batch.accounts.map { it.toTotpAccount(createdAt) })
+                    } catch (e: VaultException.Locked) {
+                        return@launch
+                    }
+                    if (vaultState.value !is VaultState.Unlocked) return@launch
+                    dialog = AuthenticatorDialog.Imported(batch.toSummary(imported), preview.source)
+                }
             }
             is AuthenticatorEvent.CopyCode -> clipboard.copy(event.account.codeAt(clock() / MILLIS_PER_SECOND))
             is AuthenticatorEvent.StartEdit ->
@@ -134,9 +151,15 @@ class AuthenticatorViewModel(
         }
     }
 
-    private fun scannedDialog(text: String): AuthenticatorDialog {
-        if (text.trimStart().startsWith(GOOGLE_MIGRATION_SCHEME, ignoreCase = true)) {
-            return AuthenticatorDialog.Failed(ScanError.GoogleMigration)
+    private fun scannedDialog(text: String, source: ScanSource): AuthenticatorDialog {
+        when (val migration = MigrationPayload.parse(text)) {
+            is MigrationResult.Batch -> return if (migration.accounts.isEmpty()) {
+                AuthenticatorDialog.Imported(migration.toSummary(imported = 0), source)
+            } else {
+                AuthenticatorDialog.ImportPreview(migration, source)
+            }
+            MigrationResult.MalformedPayload -> return AuthenticatorDialog.Failed(ScanError.InvalidTransferCode)
+            MigrationResult.NotMigrationUri -> Unit
         }
         return when (val result = OtpAuthUri.parse(text)) {
             is OtpAuthResult.Totp -> AuthenticatorDialog.ConfirmScanned(result.account.toTotpAccount(clock()))
@@ -146,6 +169,14 @@ class AuthenticatorViewModel(
                 AuthenticatorDialog.Failed(ScanError.InvalidCode)
         }
     }
+
+    private fun MigrationResult.Batch.toSummary(imported: Int) = MigrationImportSummary(
+        imported = imported,
+        duplicates = accounts.size - imported,
+        unsupported = skipped,
+        batchIndex = batchIndex,
+        batchSize = batchSize
+    )
 
     private fun write(action: suspend () -> Unit) {
         viewModelScope.launch {

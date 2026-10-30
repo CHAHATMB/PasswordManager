@@ -5,6 +5,7 @@ import com.example.passwordmanager.data.totp.TotpAccount
 import com.example.passwordmanager.util.totp.DEFAULT_TOTP_ALGORITHM
 import com.example.passwordmanager.util.totp.DEFAULT_TOTP_DIGITS
 import com.example.passwordmanager.util.totp.DEFAULT_TOTP_PERIOD
+import com.example.passwordmanager.util.totp.MigrationResult
 import com.example.passwordmanager.util.totp.OtpAuthAccount
 import com.example.passwordmanager.util.totp.OtpAuthResult
 import com.example.passwordmanager.util.totp.TOTP_PERIOD_RANGE
@@ -51,7 +52,21 @@ data class TotpDraft(
     }
 }
 
-enum class ScanError { NotAuthenticator, CounterBased, GoogleMigration, InvalidCode, NoQrCodeInImage, CameraPermissionDenied }
+enum class ScanError { NotAuthenticator, CounterBased, InvalidTransferCode, InvalidCode, NoQrCodeInImage, CameraPermissionDenied }
+
+/** Where a QR code came from, so "Scan next code" of a multi-code transfer uses the same way. */
+enum class ScanSource { Camera, Image }
+
+/** Outcome of importing one Google Authenticator transfer code. [batchIndex] is 0-based. */
+data class MigrationImportSummary(
+    val imported: Int,
+    val duplicates: Int,
+    val unsupported: Int,
+    val batchIndex: Int,
+    val batchSize: Int
+) {
+    val hasNextCode: Boolean get() = batchIndex + 1 < batchSize
+}
 
 /** The add/edit/delete step on screen. Held in the ViewModel so it survives a configuration change. */
 sealed interface AuthenticatorDialog {
@@ -60,6 +75,10 @@ sealed interface AuthenticatorDialog {
     /** Reading a picked image. */
     data object Scanning : AuthenticatorDialog
     data class ConfirmScanned(val account: TotpAccount) : AuthenticatorDialog
+    /** How to export from Google Authenticator, with buttons to scan. */
+    data object GoogleImportHelp : AuthenticatorDialog
+    data class ImportPreview(val batch: MigrationResult.Batch, val source: ScanSource) : AuthenticatorDialog
+    data class Imported(val summary: MigrationImportSummary, val source: ScanSource) : AuthenticatorDialog
     data class Edit(val account: TotpAccount, val issuer: String, val accountName: String) : AuthenticatorDialog
     data class Delete(val account: TotpAccount) : AuthenticatorDialog
     data class Failed(val error: ScanError) : AuthenticatorDialog
@@ -74,6 +93,8 @@ sealed interface AuthenticatorEvent {
     data class QrScanned(val text: String?, val isCameraPermissionMissing: Boolean) : AuthenticatorEvent
     data class ImagePicked(val uri: Uri?) : AuthenticatorEvent
     data object SaveScanned : AuthenticatorEvent
+    data object OpenGoogleImport : AuthenticatorEvent
+    data object ImportMigration : AuthenticatorEvent
     data class CopyCode(val account: TotpAccount) : AuthenticatorEvent
     data class StartEdit(val account: TotpAccount) : AuthenticatorEvent
     data class ChangeEdit(val issuer: String, val accountName: String) : AuthenticatorEvent

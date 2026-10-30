@@ -14,6 +14,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ExpandLess
 import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material.icons.rounded.Image
+import androidx.compose.material.icons.rounded.ImportExport
 import androidx.compose.material.icons.rounded.Keyboard
 import androidx.compose.material.icons.rounded.QrCodeScanner
 import androidx.compose.material3.AlertDialog
@@ -45,6 +46,7 @@ import com.example.passwordmanager.presentation.components.ConfirmDialog
 import com.example.passwordmanager.presentation.components.PasswordTextField
 import com.example.passwordmanager.presentation.isTotpEditValid
 import com.example.passwordmanager.ui.theme.Spacing
+import com.example.passwordmanager.util.totp.MigrationResult
 import com.example.passwordmanager.util.totp.TOTP_DIGITS
 import com.example.passwordmanager.util.totp.TotpAlgorithm
 
@@ -72,8 +74,70 @@ fun AuthenticatorDialogs(
                 onScanImage()
             },
             onEnterKey = { onEvent(AuthenticatorEvent.OpenManualEntry) },
+            onImportFromGoogle = { onEvent(AuthenticatorEvent.OpenGoogleImport) },
             onDismiss = dismiss
         )
+        AuthenticatorDialog.GoogleImportHelp -> AlertDialog(
+            onDismissRequest = dismiss,
+            properties = secureDialog,
+            title = { Text(text = "Import from Google Authenticator") },
+            text = {
+                Text(
+                    text = "In Google Authenticator: ⋮ → Transfer accounts → Export accounts, then scan the code. " +
+                        "If it shows several codes, scan them one after another."
+                )
+            },
+            confirmButton = {
+                Row {
+                    TextButton(onClick = {
+                        dismiss()
+                        onScanImage()
+                    }) { Text(text = "From image") }
+                    TextButton(onClick = {
+                        dismiss()
+                        onScanQrCode()
+                    }) { Text(text = "Scan code") }
+                }
+            },
+            dismissButton = { TextButton(onClick = dismiss) { Text(text = "Cancel") } }
+        )
+        is AuthenticatorDialog.ImportPreview -> MigrationPreviewDialog(
+            batch = dialog.batch,
+            onImport = { onEvent(AuthenticatorEvent.ImportMigration) },
+            onDismiss = dismiss
+        )
+        is AuthenticatorDialog.Imported -> {
+            val summary = dialog.summary
+            AlertDialog(
+                onDismissRequest = dismiss,
+                properties = secureDialog,
+                title = {
+                    Text(
+                        text = if (summary.batchSize > 1) {
+                            "Code ${summary.batchIndex + 1} of ${summary.batchSize} imported"
+                        } else {
+                            "Import finished"
+                        }
+                    )
+                },
+                text = { Text(text = summary.message()) },
+                confirmButton = {
+                    if (summary.hasNextCode) {
+                        TextButton(onClick = {
+                            dismiss()
+                            if (dialog.source == ScanSource.Camera) onScanQrCode() else onScanImage()
+                        }) { Text(text = "Scan next code") }
+                    } else {
+                        TextButton(onClick = dismiss) { Text(text = "OK") }
+                    }
+                },
+                dismissButton = if (summary.hasNextCode) {
+                    { TextButton(onClick = dismiss) { Text(text = "Done") } }
+                } else {
+                    null
+                }
+            )
+        }
         is AuthenticatorDialog.ManualEntry -> ManualEntrySheet(draft = dialog.draft, onEvent = onEvent)
         AuthenticatorDialog.Scanning -> AlertDialog(
             onDismissRequest = dismiss,
@@ -152,7 +216,13 @@ fun AuthenticatorDialogs(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun AddOptionsSheet(onScanQrCode: () -> Unit, onScanImage: () -> Unit, onEnterKey: () -> Unit, onDismiss: () -> Unit) {
+private fun AddOptionsSheet(
+    onScanQrCode: () -> Unit,
+    onScanImage: () -> Unit,
+    onEnterKey: () -> Unit,
+    onImportFromGoogle: () -> Unit,
+    onDismiss: () -> Unit
+) {
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         properties = ModalBottomSheetDefaults.properties(securePolicy = SecureFlagPolicy.SecureOn)
@@ -166,8 +236,48 @@ private fun AddOptionsSheet(onScanQrCode: () -> Unit, onScanImage: () -> Unit, o
             AddOption(Icons.Rounded.QrCodeScanner, "Scan QR code", onScanQrCode)
             AddOption(Icons.Rounded.Image, "Scan from image", onScanImage)
             AddOption(Icons.Rounded.Keyboard, "Enter setup key", onEnterKey)
+            AddOption(Icons.Rounded.ImportExport, "Import from Google Authenticator", onImportFromGoogle)
         }
     }
+}
+
+@Composable
+private fun MigrationPreviewDialog(batch: MigrationResult.Batch, onImport: () -> Unit, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        properties = secureDialog,
+        title = { Text(text = if (batch.accounts.size == 1) "Import 1 account?" else "Import ${batch.accounts.size} accounts?") },
+        text = {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(Spacing.s)
+            ) {
+                if (batch.batchSize > 1) Text(text = "Code ${batch.batchIndex + 1} of ${batch.batchSize}")
+                batch.accounts.forEach { account ->
+                    Column {
+                        Text(text = account.issuer.ifBlank { account.accountName }, style = MaterialTheme.typography.titleSmall)
+                        if (account.issuer.isNotBlank() && account.accountName.isNotBlank()) {
+                            Text(text = account.accountName, style = MaterialTheme.typography.bodyMedium)
+                        }
+                    }
+                }
+                if (batch.skipped > 0) {
+                    Text(
+                        text = "${batch.skipped} more can't be imported: counter-based or unsupported codes.",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = onImport) { Text(text = "Import") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(text = "Cancel") } }
+    )
+}
+
+private fun MigrationImportSummary.message(): String {
+    val parts = mutableListOf("Imported $imported", "$duplicates already in Vaultly")
+    if (unsupported > 0) parts += "$unsupported not supported (counter-based or invalid)"
+    return parts.joinToString(", ") + "."
 }
 
 @Composable
@@ -282,7 +392,7 @@ private fun <T> Choice(options: List<T>, selected: T, label: (T) -> String, onSe
 private fun ScanError.message(): String = when (this) {
     ScanError.NotAuthenticator -> "This QR code is not an authenticator code."
     ScanError.CounterBased -> "Counter-based (HOTP) codes are not supported."
-    ScanError.GoogleMigration -> "Importing from Google Authenticator comes in a later version."
+    ScanError.InvalidTransferCode -> "This transfer code couldn't be read. Nothing was imported."
     ScanError.InvalidCode -> "This authenticator QR code has an invalid setup key or settings."
     ScanError.NoQrCodeInImage -> "No QR code was found in this image."
     ScanError.CameraPermissionDenied ->
