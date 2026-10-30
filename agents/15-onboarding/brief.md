@@ -1,6 +1,6 @@
 # Onboarding and setup biometrics
 
-Status: PLANNED
+Status: IN_REVIEW
 Backlog ID: 15
 
 ## Goal
