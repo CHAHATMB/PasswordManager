@@ -28,7 +28,8 @@ class VaultHeaderStore(private val prefs: SharedPreferences) {
                 ),
                 salt = requireBytes(KEY_SALT),
                 iv = requireBytes(KEY_IV),
-                wrappedKey = requireBytes(KEY_WRAPPED_KEY)
+                wrappedKey = requireBytes(KEY_WRAPPED_KEY),
+                biometric = loadBiometric()
             )
             if (header.salt.size != SALT_SIZE_BYTES || header.iv.size != IV_SIZE_BYTES) {
                 throw VaultException.CorruptHeader("Invalid salt or IV length")
@@ -42,7 +43,7 @@ class VaultHeaderStore(private val prefs: SharedPreferences) {
     }
 
     fun save(header: VaultHeader) {
-        val committed = prefs.edit()
+        val editor = prefs.edit()
             .putInt(KEY_VERSION, header.version)
             .putInt(KEY_KDF_MEMORY_KIB, header.kdfParams.memoryKib)
             .putInt(KEY_KDF_ITERATIONS, header.kdfParams.iterations)
@@ -50,8 +51,20 @@ class VaultHeaderStore(private val prefs: SharedPreferences) {
             .putString(KEY_SALT, encoder.encodeToString(header.salt))
             .putString(KEY_IV, encoder.encodeToString(header.iv))
             .putString(KEY_WRAPPED_KEY, encoder.encodeToString(header.wrappedKey))
-            .commit()
-        if (!committed) throw IOException("Failed to write vault header")
+        if (header.biometric != null) {
+            editor.putString(KEY_BIO_IV, encoder.encodeToString(header.biometric.iv))
+                .putString(KEY_WRAPPED_KEY_BIO, encoder.encodeToString(header.biometric.wrappedKey))
+        } else {
+            editor.remove(KEY_BIO_IV).remove(KEY_WRAPPED_KEY_BIO)
+        }
+        if (!editor.commit()) throw IOException("Failed to write vault header")
+    }
+
+    // Optional: an incomplete biometric blob counts as "biometrics off" so the master password still works.
+    private fun loadBiometric(): BiometricWrappedKey? {
+        val iv = prefs.getString(KEY_BIO_IV, null) ?: return null
+        val wrappedKey = prefs.getString(KEY_WRAPPED_KEY_BIO, null) ?: return null
+        return BiometricWrappedKey(decoder.decode(iv), decoder.decode(wrappedKey))
     }
 
     private fun requireInt(key: String): Int {
@@ -74,6 +87,8 @@ class VaultHeaderStore(private val prefs: SharedPreferences) {
         private const val KEY_SALT = "salt"
         private const val KEY_IV = "iv"
         private const val KEY_WRAPPED_KEY = "wrapped_key"
+        private const val KEY_BIO_IV = "bio_iv"
+        private const val KEY_WRAPPED_KEY_BIO = "wrapped_vk_bio"
         private val encoder = Base64.getEncoder()
         private val decoder = Base64.getDecoder()
     }
