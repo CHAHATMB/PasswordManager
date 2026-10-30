@@ -29,3 +29,30 @@ Notes (no action):
 - [x] Critical business logic has unit tests; no needless tests (gaps in 6)
 - [x] Commit messages follow convention and are concise
 - [x] Build + unit tests pass (`./gradlew assembleDebug testDebugUnitTest --rerun`: 33 tests, 0 failures)
+
+## Round 2
+- Commit range reviewed: 09f8ca2..0077e5e
+- Verdict: APPROVED
+
+### Findings
+| # | Severity (blocker/major/minor) | File:line | Issue | Suggested fix |
+|---|---|---|---|---|
+| 1 | minor | presentation/LockScreen/LockViewModel.kt:55-57 | `catch (e: Exception)` does not catch `Error`s, so `OutOfMemoryError` from Argon2 at 64 MiB or `UnsatisfiedLinkError` from a missing native lib still crash the app. The comment "native KDF failures" overstates the coverage. | No change needed for 01. The verifier should watch for these on a low-RAM device. If they show up, handle them in the KDF layer, not with a broad `Throwable` catch. |
+| 2 | minor | git dbac512 | The subject is 78 characters, which repeats Round 1 #8. | No action. Keep subjects ≤ 72 characters. |
+
+Round 1 follow-up:
+- #1 fixed. `CancellationException` is rethrown before the generic catch, the password `CharArray` is still zeroed in `finally`, and `Unexpected` has a UI message.
+- #3 fixed. `NonCancellable + Default` wraps key creation/unwrap, the DB open, the state update and zeroing. Cancellation still propagates: `withContext` rethrows on return once the block finishes, and the ViewModel rethrows it. Side effect: a cancelled unlock still leaves the app-scoped session Unlocked. That is acceptable, because the KDF is not interruptible anyway and the state stays consistent. The header load in `unlock` stays cancellable, which is correct.
+- #5 fixed (plain `remember`). The only `rememberSaveable` left is the nav index, which is harmless.
+- #2 and #4 fixed in the comment and dev-log, with clear key-lifetime notes for 02.
+- #6 fixed. `SqlCipherRawKeyTest` (1 test) and `LockViewModelTest` (5 tests) are lean and use the real session with PBKDF2. The two validation-mapping tests overlap slightly with `ValidationTest`, but they check the error mapping, so that is fine.
+- #7 was deferred with a stated reason. Accepted.
+- No over-engineering. The changes are small and stay within scope.
+
+### Checklist
+- [x] Correctness / no obvious bugs
+- [x] Simple, no over-engineering, matches codebase style
+- [x] Security (no plaintext secrets, no logging of secrets, key handling)
+- [x] Critical business logic has unit tests; no needless tests
+- [x] Commit messages follow convention and are concise (see 2)
+- [x] Build + unit tests pass (`./gradlew assembleDebug testDebugUnitTest --rerun`: 39 tests, 0 failures)
