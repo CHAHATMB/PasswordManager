@@ -1,3 +1,7 @@
 <resources>
     <string name="app_name">Vaultly</string>
+    <plurals name="totp_new_code_in">
+        <item quantity="one">New code in %d second</item>
+        <item quantity="other">New code in %d seconds</item>
+    </plurals>
 </resources>

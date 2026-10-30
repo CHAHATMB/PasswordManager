@@ -30,9 +30,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import com.example.passwordmanager.R
 import com.example.passwordmanager.presentation.components.AppTopBar
 import com.example.passwordmanager.presentation.components.EmptyState
 import com.example.passwordmanager.presentation.components.ItemRow
@@ -138,10 +140,11 @@ private fun TotpRow(item: TotpCodeItem, onEvent: (AuthenticatorEvent) -> Unit) {
 @Composable
 private fun Countdown(secondsRemaining: Int, period: Int, modifier: Modifier = Modifier) {
     val color = if (secondsRemaining <= WARNING_SECONDS) MaterialTheme.extendedColors.warning else MaterialTheme.colorScheme.primary
+    val description = pluralStringResource(R.plurals.totp_new_code_in, secondsRemaining, secondsRemaining)
     Box(
         modifier = modifier
             .size(36.dp)
-            .semantics(mergeDescendants = true) { contentDescription = "New code in $secondsRemaining seconds" },
+            .semantics(mergeDescendants = true) { contentDescription = description },
         contentAlignment = Alignment.Center
     ) {
         CircularProgressIndicator(
