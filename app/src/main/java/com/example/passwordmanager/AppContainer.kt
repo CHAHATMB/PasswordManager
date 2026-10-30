@@ -1,0 +1,35 @@
+package com.example.passwordmanager
+
+import android.app.ActivityManager
+import android.content.Context
+import com.example.passwordmanager.data.CredentialDatabase
+import com.example.passwordmanager.data.CredentialRepository
+import com.example.passwordmanager.data.crypto.Argon2KeyDerivation
+import com.example.passwordmanager.data.crypto.KdfParams
+import com.example.passwordmanager.data.crypto.VaultCrypto
+import com.example.passwordmanager.data.vault.VaultHeaderStore
+import com.example.passwordmanager.data.vault.VaultSession
+
+class AppContainer(context: Context) {
+
+    private val appContext = context.applicationContext
+
+    val vaultSession = VaultSession(
+        headerStore = VaultHeaderStore(
+            appContext.getSharedPreferences(VaultHeaderStore.PREFS_NAME, Context.MODE_PRIVATE)
+        ),
+        crypto = VaultCrypto(Argon2KeyDerivation()),
+        kdfParams = if (appContext.getSystemService(ActivityManager::class.java).isLowRamDevice) {
+            KdfParams.LOW_RAM
+        } else {
+            KdfParams.DEFAULT
+        },
+        openDatabase = { vaultKey -> CredentialDatabase.openEncrypted(appContext, vaultKey) },
+        deleteDatabases = {
+            appContext.deleteDatabase(CredentialDatabase.LEGACY_DB_NAME)
+            appContext.deleteDatabase(CredentialDatabase.VAULT_DB_NAME)
+        }
+    )
+
+    val credentialRepository = CredentialRepository(vaultSession)
+}

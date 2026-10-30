@@ -2,9 +2,14 @@ package com.example.passwordmanager.presentation
 
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
 import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
+import com.example.passwordmanager.PasswordManagerApp
 import com.example.passwordmanager.data.Credential
-import com.example.passwordmanager.data.CredentialDao
+import com.example.passwordmanager.data.CredentialRepository
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
@@ -15,15 +20,16 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-class CredentialViewModel ( private var dao:CredentialDao): ViewModel() {
+@OptIn(ExperimentalCoroutinesApi::class)
+class CredentialViewModel(private val repository: CredentialRepository) : ViewModel() {
 
     private var isSortedByDateCreate = MutableStateFlow(true)
 
     private var credentials  = isSortedByDateCreate.flatMapLatest { value ->
         if(value){
-            dao.getOrderedByDateCreated()
+            repository.getOrderedByDateCreated()
         } else {
-            dao.getOrderedByWebsite()
+            repository.getOrderedByWebsite()
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(), emptyList())
 
@@ -64,7 +70,7 @@ class CredentialViewModel ( private var dao:CredentialDao): ViewModel() {
 
             is CredentialEvent.DeleteCredential -> {
                 viewModelScope.launch{
-                    dao.deleteCredential(event.credential)
+                    repository.deleteCredential(event.credential)
                 }
             }
             is CredentialEvent.SaveCredential -> {
@@ -84,7 +90,7 @@ class CredentialViewModel ( private var dao:CredentialDao): ViewModel() {
                     note = state.value.note.value, dataCreate = System.currentTimeMillis()
                 )
                 viewModelScope.launch {
-                    dao.upsertCredential(credential)
+                    repository.upsertCredential(credential)
                 }
                 // seems not need but see
                 _state.update {
@@ -97,9 +103,9 @@ class CredentialViewModel ( private var dao:CredentialDao): ViewModel() {
             is CredentialEvent.FavoriteCredential ->{
                 event.credential.isFav = !event.credential.isFav
                 viewModelScope.launch {
-                    dao.upsertCredential(event.credential)
+                    repository.upsertCredential(event.credential)
                     // Manually refresh credentials flow
-                    val updatedCredentials = dao.getOrderedByDateCreated().first() // Replace with your preferred sorting
+                    val updatedCredentials = repository.getOrderedByDateCreated().first() // Replace with your preferred sorting
                     _state.value = _state.value.copy(credentials = updatedCredentials)
                 }
             }
@@ -115,6 +121,14 @@ class CredentialViewModel ( private var dao:CredentialDao): ViewModel() {
             }
 
             else -> {}
+        }
+    }
+
+    companion object {
+        val Factory = viewModelFactory {
+            initializer {
+                CredentialViewModel((this[APPLICATION_KEY] as PasswordManagerApp).container.credentialRepository)
+            }
         }
     }
 }
