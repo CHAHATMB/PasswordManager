@@ -28,10 +28,4 @@ class AutoLockTest {
             assertTrue("$timeout did not lock after the boundary", shouldLock(stoppedAt, stoppedAt + timeout.millis + 1, timeout))
         }
     }
-
-    @Test
-    fun oneMinuteStaysUnlockedAfterThirtySecondsAndLocksAfterSixty() {
-        assertFalse(shouldLock(stoppedAt, stoppedAt + 30_000, AutoLockTimeout.MINUTE_1))
-        assertTrue(shouldLock(stoppedAt, stoppedAt + 61_000, AutoLockTimeout.MINUTE_1))
-    }
 }
