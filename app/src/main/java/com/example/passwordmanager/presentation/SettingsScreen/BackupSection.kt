@@ -49,7 +49,7 @@ fun BackupSection(dialog: BackupDialog?, onEvent: (BackupEvent) -> Unit, onPick:
         null -> Unit
         is BackupDialog.MasterPassword -> PasswordDialog(
             title = "Export encrypted backup",
-            message = "Enter your master password to continue.",
+            message = "The backup holds your passwords and authenticator accounts. Enter your master password to continue.",
             error = dialog.error,
             confirmLabel = "Continue",
             withConfirmation = false,
@@ -113,7 +113,13 @@ fun BackupSection(dialog: BackupDialog?, onEvent: (BackupEvent) -> Unit, onPick:
         is BackupDialog.Imported -> MessageDialog(
             title = "Import finished",
             message = with(dialog.result) {
-                "Imported: $imported\nSkipped as duplicate: $duplicates\nInvalid (no website or password): $invalid"
+                val passwords = "Imported: $imported\nSkipped as duplicate: $duplicates\nInvalid (no website or password): $invalid"
+                if (totpImported + totpDuplicates + totpInvalid == 0) {
+                    passwords
+                } else {
+                    "Passwords\n$passwords\n\nAuthenticator accounts\nImported: $totpImported\n" +
+                        "Skipped as duplicate: $totpDuplicates\nInvalid: $totpInvalid"
+                }
             },
             onDismiss = dismiss
         )

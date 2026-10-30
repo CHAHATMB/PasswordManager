@@ -42,7 +42,7 @@ class BackupCrypto(
 ) {
 
     /** Returns the backup file's bytes, with a fresh salt and IV. */
-    fun encrypt(items: List<BackupItem>, password: CharArray, params: KdfParams): ByteArray {
+    fun encrypt(content: BackupContent, password: CharArray, params: KdfParams): ByteArray {
         val salt = random.randomBytes(SALT_SIZE_BYTES)
         val iv = random.randomBytes(IV_SIZE_BYTES)
         val header = BackupHeader(
@@ -52,7 +52,7 @@ class BackupCrypto(
             cipher = BACKUP_CIPHER,
             iv = encoder.encodeToString(iv)
         )
-        val plaintext = Json.encodeToString(items).encodeToByteArray()
+        val plaintext = Json.encodeToString(content).encodeToByteArray()
         val key = keyDerivation.derivePasswordKey(password, salt, params)
         val ciphertext = try {
             aesGcmCipher(Cipher.ENCRYPT_MODE, key, iv, header.aad()).doFinal(plaintext)
@@ -75,7 +75,9 @@ class BackupCrypto(
             throw BackupException.UnknownFormat()
         }
         val version = (root["version"] as? JsonPrimitive)?.intOrNull
-        if (version != BACKUP_VERSION) throw BackupException.UnsupportedVersion(version)
+        if (version != BACKUP_VERSION && version != BACKUP_VERSION_CREDENTIALS_ONLY) {
+            throw BackupException.UnsupportedVersion(version)
+        }
         val backup = try {
             Json.decodeFromJsonElement<BackupFile>(root)
         } catch (e: SerializationException) {
@@ -111,7 +113,7 @@ class BackupCrypto(
     }
 
     /** Throws [BackupException.WrongPassword] when the password is wrong or any part of the file was changed. */
-    fun decrypt(backup: EncryptedBackup, password: CharArray): List<BackupItem> {
+    fun decrypt(backup: EncryptedBackup, password: CharArray): BackupContent {
         val key = keyDerivation.derivePasswordKey(password, backup.salt, backup.kdfParams)
         val plaintext = try {
             aesGcmCipher(Cipher.DECRYPT_MODE, key, backup.iv, backup.header.aad()).doFinal(backup.ciphertext)
@@ -121,7 +123,12 @@ class BackupCrypto(
             key.fill(0)
         }
         try {
-            return Json.decodeFromString<List<BackupItem>>(plaintext.decodeToString())
+            val json = plaintext.decodeToString()
+            return if (backup.header.version == BACKUP_VERSION_CREDENTIALS_ONLY) {
+                BackupContent(credentials = Json.decodeFromString<List<BackupItem>>(json))
+            } else {
+                Json.decodeFromString<BackupContent>(json)
+            }
         } catch (e: SerializationException) {
             throw BackupException.Malformed("Backup contents are invalid", e)
         } catch (e: IllegalArgumentException) {

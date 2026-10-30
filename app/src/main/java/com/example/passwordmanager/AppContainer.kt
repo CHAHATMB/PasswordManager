@@ -60,6 +60,7 @@ class AppContainer(context: Context) {
     val backupRepository = BackupRepository(
         contentResolver = appContext.contentResolver,
         credentials = credentialRepository,
+        totp = totpRepository,
         crypto = BackupCrypto(keyDerivation),
         kdfParams = kdfParams
     )
