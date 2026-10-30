@@ -34,7 +34,7 @@
   - Legacy data (D3): setup deletes `credential.db` (and any stale `vault.db`) via `Context.deleteDatabase` (also removes `-wal/-shm/-journal`) before creating the vault.
 - Decisions / deviations from brief:
   - Gating uses a `when (vaultState)` in `MainActivity` rather than routes in one NavHost. The Unlocked branch owns its NavController and sheet state, so every transition drops the back stack by construction and nothing from the shell can be composed behind Setup/Unlock.
-  - VK is not kept after the DB opens: `VaultSession` zeroes it right away (SQLCipher holds its own copy while open). Feature 02 needs VK for biometric wrapping and should either wrap at unlock time or keep it in the session.
+  - `VaultSession` zeroes its own VK array right after the DB opens. *(Corrected in Round 2.)* The VK is still on the heap while unlocked: `SupportOpenHelperFactory(byte[])` in sqlcipher-android 4.6.1 uses `clearPassphrase = false` and keeps the `x'<hex>'` raw-key array for the DB's lifetime, and it doesn't wipe it on `close()`. Feature 02 needs VK for biometric wrapping. It should either wrap at unlock time or keep the VK in the session.
   - `VaultSession` takes a second lambda, `deleteDatabases`, besides the DB opener, so setup can wipe the legacy and stale DB files and tests can pass a no-op.
   - Add-form fields use `remember`, not `rememberSaveable`, so typed passwords never enter the saved-state Bundle. Cost: text typed in the sheet is lost on rotation.
   - Saving from the sheet no longer navigates to Home underneath. It only closes the sheet. The unreachable `Add` route pops back on save.
@@ -53,6 +53,8 @@
   - `app/src/test/resources/robolectric.properties` pins SDK 34 and uses a plain `Application`, because `PasswordManagerApp` loads native SQLCipher.
 - Build/test result: `./gradlew assembleDebug testDebugUnitTest` → PASS (invoked as `./gradlew`).
 - Notes for reviewer/verifier:
+  - Key lifetime (02 must handle this): `CredentialDatabase.openEncrypted` hands SQLCipher a raw-key array that the factory keeps and never wipes. On lock, 02 must keep a reference to that array, call `database.close()`, then `fill(0)` it.
+  - The master password also exists as immutable `String`s (Compose text state, the ViewModel call arguments), so zeroing the `CharArray`/`ByteArray` copies only shortens their lifetime. This is a Compose limitation.
   - Not run on a device: the emulator would not start (host disk space too low). Argon2kt, SQLCipher raw-key open and the UI flows are therefore unverified on device. Check first that Setup completes without a crash (native libs load, Argon2 at 64 MiB).
   - Argon2 is called through its `ByteBuffer` overload with our own direct buffers, wiped afterwards. Buffer helpers use absolute `put(index, …)` to avoid the `flip()`/`clear()` covariant-return `NoSuchMethodError` on older Android.
   - Manual test flow (package `com.example.passwordmanager`):
@@ -71,5 +73,19 @@
     13. `adb shell dumpsys package com.example.passwordmanager | grep -i flags` → no `ALLOW_BACKUP`.
 
 ## Round 2 (fixes from review/verify)
-- Addressed findings:
+- Addressed findings (review.md Round 1):
+  - #1: `LockViewModel.submit` maps any other `Exception` to `LockError.Unexpected` ("Something went wrong. Please try again.") and rethrows `CancellationException`. This covers both setup and unlock.
+  - #3: `VaultSession.setup`/`unlock` run key creation or unwrap, the DB open, the state update and key zeroing in one `withContext(NonCancellable + Dispatchers.Default)` block. Cancellation can no longer drop an unzeroed key or leak an opened DB with the state stuck at NotSetUp. The existing close-on-header-save-failure still applies.
+  - #5: the per-row `isPasswordRevealed` and `isSheetOpen` use plain `remember`, so rows are always masked and the sheet is closed after unlock.
+  - #2/#4: fixed the raw-key comment in `CredentialDatabase` and the dev-log wording. Added key-lifetime and String notes under Round 1 "Notes".
+  - #6: `sqlCipherRawKey` is now `internal`. Added `SqlCipherRawKeyTest` (1) and `LockViewModelTest` (5, Robolectric, real `VaultSession` with PBKDF2 and in-memory Room, `Dispatchers.setMain`): too short, mismatch, wrong password, SQLCipher failure → Unexpected (still NotSetUp), correct unlock.
+  - Not done: #7 (the KDF param range check is not a one-liner, because the tests store `memoryKib = 0` headers) and #8 (no action).
 - Commits:
+  - e87b7ce fix: show a generic error when vault setup or unlock fails unexpectedly
+  - dbac512 fix: zero the vault key and keep the DB handle if setup or unlock is cancelled
+  - f4dc890 fix: keep password reveal and sheet flags out of saved state
+  - 34544f6 fix: correct the SQLCipher raw-key lifetime comment (also makes `sqlCipherRawKey` internal)
+  - a56bd27 test: cover LockViewModel error mapping and SQLCipher raw-key format
+- Tests: 39 total, 0 failures.
+- Build/test result: `./gradlew assembleDebug testDebugUnitTest` → PASS.
+- Still not verified on a device (disk space).
