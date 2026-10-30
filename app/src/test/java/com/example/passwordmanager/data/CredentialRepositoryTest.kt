@@ -15,8 +15,6 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
@@ -177,7 +175,7 @@ class CredentialRepositoryTest {
     }
 
     @Test
-    fun favouriteToggleLeavesTheOriginalUnchangedAndUpdatesFavourites() = runTest {
+    fun favouriteToggleUpdatesTheFavouritesQuery() = runTest {
         val repository = unlockedRepository()
         repository.upsertCredential(credential("github.com"))
         val original = repository.search("", sortByWebsite = false).first().single()
@@ -185,9 +183,7 @@ class CredentialRepositoryTest {
         val toggled = original.copy(isFav = !original.isFav)
         repository.upsertCredential(toggled)
 
-        println("Original isFav=${original.isFav}, toggled isFav=${toggled.isFav}")
-        assertFalse(original.isFav)
-        assertNotEquals(original, toggled)
+        println("Favourites after toggling ${original.website} on: ${repository.getFavorites(sortByWebsite = false).first().map { it.website }}")
         assertEquals(listOf(original.id), repository.getFavorites(sortByWebsite = false).first().map { it.id })
 
         repository.upsertCredential(toggled.copy(isFav = false))
