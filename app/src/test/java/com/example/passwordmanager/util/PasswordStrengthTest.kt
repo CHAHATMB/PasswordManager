@@ -70,4 +70,20 @@ class PasswordStrengthTest {
             assertEquals("generated #$it", PasswordStrength.Strong, PasswordStrength.of(password))
         }
     }
+
+    @Test
+    fun fromBitsUsesTheFortySixtyEightyBands() {
+        val cases = listOf(
+            0.0 to PasswordStrength.Weak,
+            39.99 to PasswordStrength.Weak,
+            40.0 to PasswordStrength.Fair,
+            59.99 to PasswordStrength.Fair,
+            60.0 to PasswordStrength.Good,
+            79.99 to PasswordStrength.Good,
+            80.0 to PasswordStrength.Strong
+        )
+        for ((bits, expected) in cases) {
+            assertEquals("$bits bits", expected, PasswordStrength.fromBits(bits))
+        }
+    }
 }
