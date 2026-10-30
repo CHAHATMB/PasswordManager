@@ -138,3 +138,12 @@
 - Verifier changes to the Round 1 flow:
   - Step 2: `correcthorse1` now shows "Strength: Fair" with no warning.
   - Step 5: with Symbols and Digits off, the preview strength should be Good or Strong.
+- Follow-up (1865025 fix: penalise only runs of three or more in the strength score, plus this `docs:` commit):
+  - The sequence rule now discounts a character only when it extends a ±1 run of three or more in the same direction. So `abc` loses only `c`, and a single step such as `12` costs nothing.
+  - New test: `58120374961548302769` (steps 12, 54, 76; no 3-run) → not Weak (it scores Good). `abcdefgh` → still Weak. 98 tests, 0 failures (`./gradlew testDebugUnitTest`).
+  - Simulated again (20 000 each):
+    - 20 random digits: Fair 90 %, Weak 9 %, Good 1 %. This replaces the 54 % Weak result above.
+    - 20 lowercase: Strong 67 %, Good 33 %.
+    - 12 of all four classes: Good 99.5 %.
+  - Scores: `correcthorse1` → Good (62.0 bits), no warning on Setup. `password` → Weak (32.9).
+  - Verifier: in Round 1 step 2, `correcthorse1` shows "Strength: Good".
