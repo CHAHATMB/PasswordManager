@@ -60,6 +60,7 @@ This project is licensed under the MIT License
 - [Room](https://developer.android.com/training/data-storage/room) - Database management
 - [Biometric](https://developer.android.com/training/sign-in/biometric-auth) - Fingerprint authentication
 - [Material Design Components](https://material.io/develop/android) - UI components
+- EFF Large Wordlist for passphrases, © Electronic Frontier Foundation, [CC BY 3.0 US](https://creativecommons.org/licenses/by/3.0/us/), https://www.eff.org/dice
 
 ---
 
