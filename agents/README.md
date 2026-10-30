@@ -31,7 +31,8 @@ screenshots/<NN-feature-slug>/   PNGs captured by the verifier
 
 ## Rules for all agents
 
-- Work directly on `main`. Do not push. Do not rewrite history (no amend/rebase/reset of existing commits).
+- Developer and reviewer work in a git worktree on branch `scratch/STRY-<NN>-<slug>` cut from `main`, so features can be built in parallel; the orchestrator cherry-picks approved commits onto `main`. Follow-up fixes and verify run on `main`. Do not push. Do not rewrite history (no amend/rebase/reset of existing commits).
+- Only one agent uses the emulator at a time.
 - Commit messages: Conventional Commits – `feat:`, `fix:`, `test:`, `refactor:`, `docs:`, `chore:`. One logical change per commit.
   Short subject line; body only when the *why* isn't obvious. No long prose explaining code.
 - Only write inside your own section/file of the feature folder. Append, don't erase other agents' notes.
