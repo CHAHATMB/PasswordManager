@@ -29,3 +29,34 @@ Notes (no action):
 - [ ] Critical business logic has unit tests; no needless tests (finding 5, minor)
 - [x] Commit messages follow convention and are concise (all subjects 72 characters or fewer, no bodies)
 - [x] Build + unit tests pass (`./gradlew assembleDebug testDebugUnitTest`: 60 tests, 0 failures; `assembleRelease` OK)
+
+## Round 2
+- Commit range reviewed: 7023304..b143e41
+- Verdict: APPROVED
+
+### Round 1 findings
+- #1: fixed. `takeBiometricUnlockCipher()` also catches `GeneralSecurityException`/`ProviderException`, and `KeyPermanentlyInvalidatedException` is still caught first. `disableBiometric()` removes the blob before deleting the key, and `deleteKey()` is best effort, so a broken Keystore can no longer cause a crash loop. A test covers it, using Robolectric's missing `AndroidKeyStore` and asserting that precondition.
+- #2: fixed. Biometric Base64 is decoded under its own try, and a test covers it.
+- #3: fixed. The `lockRequests` counter plus `compareAndSet` in `lock()` is correct for both orderings: a lock before `Unlocked` is published, and a lock between publishing and the recheck. Both keys are zeroed once, and the DB is closed once.
+- #4: fixed. `VaultException.Locked` is mapped only when the session is no longer unlocked, other errors are rethrown, and the ViewModel drops it quietly.
+- #5 / persisted backoff: correct. The clamp `coerceIn(0, delay)` caps a clock set backwards at one full delay. A clock set forward skips the wait, which is accepted and documented. Prefs are excluded from backup by `data_extraction_rules`. `retryInSeconds` is set together with the error, and `init` starts the countdown, so a cold start shows the remaining wait.
+- #6: done. #7: the dev-log says every commit builds with its tests (not re-checked here).
+
+### New findings
+| # | Severity | File:line | Issue | Suggested fix |
+|---|---|---|---|---|
+| 1 | minor | data/CredentialRepository.kt:34 | `catch (e: IllegalStateException)` also catches kotlinx `CancellationException` (it is a subclass). When the vault is locked, a cancellation gets turned into `VaultException.Locked`. This is harmless today, because the job is already cancelled and the ViewModel drops `Locked`, but it breaks cancellation propagation for future callers. | Rethrow `CancellationException` before the `IllegalStateException` catch. This can go in feature 03. |
+| 2 | minor | presentation/LockScreen/LockViewModel.kt:99 | `turnOffBiometric` launches `disableBiometric()` without a catch. A failed header `commit()` (`IOException`, e.g. a full disk) would crash, and this path can now be reached from any Keystore failure. The window is narrow. | Optional: catch `IOException` in the launch. The worst case is the prompt being skipped again on the next launch. |
+
+Notes (no action):
+- `UnlockThrottle` calls `commit()` on the main thread. It is a tiny write and matches `VaultHeaderStore`.
+- `UnlockThrottleTest.successResetsTheCount` overlaps with the last assertion of the `LockViewModelTest` backoff test. Both are cheap, so no change is needed.
+- After a relock during an unlock, `Unlocked` shows briefly, and then the biometric prompt is due again on `Locked`. This is expected.
+
+### Checklist
+- [x] Correctness / no obvious bugs (2 minor, non-blocking)
+- [x] Simple, no over-engineering, matches codebase style
+- [x] Security (no plaintext secrets, no logging of secrets, key handling)
+- [x] Critical business logic has unit tests; no needless tests
+- [x] Commit messages follow convention and are concise (all subjects 71 characters or fewer, no bodies)
+- [x] Build + unit tests pass (`./gradlew assembleDebug testDebugUnitTest`: 66 tests, 0 failures)
