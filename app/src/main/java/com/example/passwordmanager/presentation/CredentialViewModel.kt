@@ -15,6 +15,7 @@ import com.example.passwordmanager.data.CredentialSort
 import com.example.passwordmanager.data.vault.VaultException
 import com.example.passwordmanager.data.vault.VaultState
 import com.example.passwordmanager.util.SecureClipboard
+import java.time.Clock
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
@@ -33,7 +34,8 @@ import kotlinx.coroutines.launch
 class CredentialViewModel(
     private val repository: CredentialRepository,
     private val clipboard: SecureClipboard,
-    private val vaultState: StateFlow<VaultState>
+    private val vaultState: StateFlow<VaultState>,
+    private val clock: Clock = Clock.systemDefaultZone()
 ) : ViewModel() {
 
     private val _sort = MutableStateFlow(CredentialSort.CREATED)
@@ -94,16 +96,17 @@ class CredentialViewModel(
             }
             is CredentialEvent.SaveCredential -> {
                 if (!isCredentialFormValid(event.website, event.password)) return
+                val now = clock.millis()
                 val credential = Credential(
                     website = event.website, username = event.username, password = event.password,
-                    note = event.note.orEmpty(), dataCreate = System.currentTimeMillis()
+                    note = event.note.orEmpty(), dataCreate = now, updatedAt = now
                 )
                 write { repository.upsertCredential(credential) }
             }
             is CredentialEvent.UpdateCredential -> {
                 val credential = event.credential
                 if (!isCredentialFormValid(credential.website, credential.password)) return
-                write { repository.upsertCredential(credential) }
+                write { repository.upsertCredential(credential.copy(updatedAt = clock.millis())) }
             }
             is CredentialEvent.SetSort -> _sort.value = event.sort
             is CredentialEvent.ToggleFavoritesOnly -> _favoritesOnly.value = !_favoritesOnly.value

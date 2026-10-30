@@ -17,7 +17,7 @@ sealed interface CredentialEvent {
         var note: String?
     ): CredentialEvent
 
-    /** [credential] carries the edited fields with the original id and dataCreate. */
+    /** [credential] carries the edited fields with the original id and dataCreate; updatedAt is set on save. */
     data class UpdateCredential(val credential: Credential): CredentialEvent
 
     data class FavoriteCredential(var credential: Credential): CredentialEvent
