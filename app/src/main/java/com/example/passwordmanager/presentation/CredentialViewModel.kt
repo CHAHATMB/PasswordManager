@@ -29,7 +29,7 @@ import kotlinx.coroutines.launch
 class CredentialViewModel(
     private val repository: CredentialRepository,
     private val clipboard: SecureClipboard,
-    vaultState: StateFlow<VaultState>
+    private val vaultState: StateFlow<VaultState>
 ) : ViewModel() {
 
     private val isSortedByWebsite = MutableStateFlow(false)
@@ -68,9 +68,12 @@ class CredentialViewModel(
         when(event){
 
             is CredentialEvent.DeleteCredential -> {
+                val session = vaultState.value
                 write {
                     repository.deleteCredential(event.credential)
-                    _deletedCredentials.send(event.credential)
+                    // A lock during the delete has already drained the channel; don't refill it.
+                    // Each unlock is a new Unlocked instance, so this also catches lock + unlock.
+                    if (vaultState.value === session) _deletedCredentials.send(event.credential)
                 }
             }
             is CredentialEvent.RestoreCredential -> {
