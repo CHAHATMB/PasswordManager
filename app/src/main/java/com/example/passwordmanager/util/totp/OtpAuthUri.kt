@@ -54,6 +54,19 @@ sealed interface OtpAuthResult {
     data object InvalidParameter : OtpAuthResult
 }
 
+/**
+ * Splits a decoded `Issuer:account` label into `(issuer, account)`; a non-blank [issuer] wins over
+ * the label prefix. When the label starts with that issuer, only that prefix is removed, so an issuer
+ * containing `:` survives a build → parse round trip.
+ */
+internal fun splitLabel(label: String, issuer: String): Pair<String, String> {
+    if (issuer.isNotBlank()) {
+        val prefix = "$issuer:"
+        return issuer to if (label.startsWith(prefix)) label.removePrefix(prefix) else label.substringAfter(':')
+    }
+    return (if (label.contains(':')) label.substringBefore(':') else "") to label.substringAfter(':')
+}
+
 /** Google's "Key Uri Format": `otpauth://totp/Issuer:account?secret=...&issuer=...`. */
 object OtpAuthUri {
 
@@ -83,9 +96,7 @@ object OtpAuthUri {
             return OtpAuthResult.InvalidParameter
         }
 
-        val labelIssuer = if (label.contains(':')) label.substringBefore(':') else ""
-        val accountName = label.substringAfter(':')
-        val issuer = parameters["issuer"]?.takeIf { it.isNotBlank() } ?: labelIssuer
+        val (issuer, accountName) = splitLabel(label, parameters["issuer"].orEmpty())
         val algorithm = parameters["algorithm"]?.let { TotpAlgorithm.fromName(it) ?: return OtpAuthResult.InvalidParameter }
             ?: DEFAULT_TOTP_ALGORITHM
         val digits = parameters["digits"]?.let { it.toIntOrNull() ?: return OtpAuthResult.InvalidParameter }

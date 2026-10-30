@@ -130,6 +130,45 @@ class OtpAuthUriTest {
     }
 
     @Test
+    fun buildEncodesSpacesAndColonsAndOmitsABlankIssuer() {
+        val withIssuer = account(issuer = "ACME Co: EU", accountName = "bob: work")
+        assertEquals(
+            "otpauth://totp/ACME%20Co%3A%20EU:bob%3A%20work?secret=JBSWY3DPEHPK3PXP&issuer=ACME%20Co%3A%20EU" +
+                "&algorithm=SHA1&digits=6&period=30",
+            OtpAuthUri.build(withIssuer)
+        )
+        val parsed = parseTotp(OtpAuthUri.build(withIssuer))
+        assertEquals("ACME Co: EU" to "bob: work", parsed.issuer to parsed.accountName)
+
+        assertEquals(
+            "otpauth://totp/alice%40example.com?secret=JBSWY3DPEHPK3PXP&algorithm=SHA1&digits=6&period=30",
+            OtpAuthUri.build(account(issuer = " ", accountName = "alice@example.com"))
+        )
+    }
+
+    @Test
+    fun buildThenParseRoundTripsEveryAlgorithmDigitsAndPeriod() {
+        for (algorithm in TotpAlgorithm.entries) for (digits in TOTP_DIGITS) for (period in listOf(1, 30, 60, 300)) {
+            val original = account(issuer = "Example", accountName = "alice", algorithm = algorithm, digits = digits, period = period)
+            val parsed = parseTotp(OtpAuthUri.build(original))
+            assertEquals(
+                "$algorithm/$digits/$period",
+                listOf(algorithm, digits, period, original.secret),
+                listOf(parsed.algorithm, parsed.digits, parsed.period, parsed.secret)
+            )
+        }
+    }
+
+    private fun account(
+        issuer: String,
+        accountName: String,
+        algorithm: TotpAlgorithm = TotpAlgorithm.SHA1,
+        digits: Int = 6,
+        period: Int = 30
+    ): OtpAuthAccount =
+        (OtpAuthAccount.create(issuer, accountName, "JBSWY3DPEHPK3PXP", algorithm, digits, period) as OtpAuthResult.Totp).account
+
+    @Test
     fun toStringDoesNotRevealTheSecret() {
         val text = parseTotp("otpauth://totp/x?secret=JBSWY3DPEHPK3PXP").toString()
         assertFalse(text, text.contains("JBSWY3DPEHPK3PXP"))

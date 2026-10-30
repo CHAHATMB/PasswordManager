@@ -160,11 +160,11 @@ object MigrationPayload {
                 DIGITS_EIGHT -> EIGHT_DIGITS
                 else -> return null
             }
-            // Same label rule as otpauth URIs: the name may be "Issuer:account", and an explicit issuer wins.
-            val labelIssuer = if (name.contains(':')) name.substringBefore(':') else ""
+            // The name may be "Issuer:account", like an otpauth label.
+            val (accountIssuer, accountName) = splitLabel(name, issuer)
             val result = OtpAuthAccount.create(
-                issuer = issuer.ifBlank { labelIssuer },
-                accountName = name.substringAfter(':'),
+                issuer = accountIssuer,
+                accountName = accountName,
                 secret = Base32.encode(secret),
                 algorithm = totpAlgorithm,
                 digits = digitCount,

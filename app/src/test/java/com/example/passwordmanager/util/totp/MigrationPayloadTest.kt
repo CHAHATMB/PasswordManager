@@ -101,12 +101,13 @@ class MigrationPayloadTest {
         val bytes = payload(
             otp(secret = SECRET_A, name = "GitHub:alice", issuer = "", type = TYPE_TOTP),
             otp(secret = SECRET_B, name = "Google:bob@gmail.com", issuer = "Google", type = TYPE_TOTP),
-            otp(secret = SECRET_C, name = "plain", issuer = "", type = TYPE_TOTP)
+            otp(secret = SECRET_C, name = "plain", issuer = "", type = TYPE_TOTP),
+            otp(secret = SECRET_A + 1, name = "ACME: EU:carol", issuer = "ACME: EU", type = TYPE_TOTP)
         )
         val batch = parseBatch(uri(bytes))
 
         assertEquals(
-            listOf("GitHub" to "alice", "Google" to "bob@gmail.com", "" to "plain"),
+            listOf("GitHub" to "alice", "Google" to "bob@gmail.com", "" to "plain", "ACME: EU" to "carol"),
             batch.accounts.map { it.issuer to it.accountName }
         )
     }
