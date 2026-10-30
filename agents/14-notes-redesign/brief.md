@@ -1,6 +1,6 @@
 # Notes redesign
 
-Status: PLANNED
+Status: IN_REVIEW
 Backlog ID: 14
 
 ## Goal
