@@ -19,7 +19,11 @@ fun UnlockScreen(
 ) {
     var password by remember { mutableStateOf("") }
 
-    LockScreenLayout(title = "Unlock vault", state = state) {
+    LockScreenLayout(
+        headline = "Welcome back",
+        message = "Your vault is locked and encrypted on this device. Enter your master password to continue.",
+        state = state
+    ) {
         PasswordTextField(
             value = password,
             onValueChange = { password = it },

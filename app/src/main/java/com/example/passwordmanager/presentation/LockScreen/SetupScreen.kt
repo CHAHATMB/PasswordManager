@@ -24,10 +24,14 @@ fun SetupScreen(
     var password by remember { mutableStateOf("") }
     var confirmation by remember { mutableStateOf("") }
 
-    LockScreenLayout(title = "Create master password", state = state) {
+    LockScreenLayout(
+        headline = "Welcome to Vaultly",
+        message = "Create a master password. It encrypts everything in your vault and can't be recovered, " +
+            "so keep it somewhere safe.",
+        state = state
+    ) {
         Text(
-            text = "Use at least $MIN_MASTER_PASSWORD_LENGTH characters. Your master password cannot be " +
-                "recovered: if you forget it, your saved passwords are lost.",
+            text = "Use at least $MIN_MASTER_PASSWORD_LENGTH characters.",
             textAlign = TextAlign.Center,
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
