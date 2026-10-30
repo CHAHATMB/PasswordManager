@@ -38,3 +38,4 @@
   - With the Hyphen separator, about 0.3 % of 6-word phrases contain one of the 4 hyphenated words, so the preview can show more than wordCount − 1 hyphens. Use another separator when checking the separator AC, or regenerate.
   - Known gap (from brief): after "Use", the Add/Edit field indicator still uses the char-class estimate and over-rates passphrases.
   - Nothing is logged; the sheet stays `SecureOn`.
+- Follow-up (main): switch jump on Passphrase toggle not fixed. The toggle already sits above the mode-specific options; the jump comes from the bottom-anchored sheet changing height between modes. Fixes need a design call (move the toggle next to Regenerate/Use, or pin a min height) rather than a simple layout tweak.

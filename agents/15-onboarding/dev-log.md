@@ -27,3 +27,4 @@
 - Notes for reviewer/verifier:
   - Not run on a device. Check: onboarding on fresh install, Back on pages 1 and 3, a kill mid-onboarding replays it, Skip then relaunch goes straight to setup, landscape scrolling, and the setup switch flows with `adb -e emu finger touch 1`.
   - Known gap: if the enable prompt is lost on rotation, the request is already consumed, so there is no re-prompt (accepted in the brief).
+- Follow-up (main): hidden Skip on the last page uses `clearAndSetSemantics {}` so TalkBack skips it (1db1f5c); sorted the `OnboardingScreen` import in MainActivity (2e68d19).

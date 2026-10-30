@@ -33,3 +33,4 @@
 ## Round 2 (fixes from review/verify)
 - Addressed findings: review R1 #1, search row now closes with a leading back arrow instead of a trailing X (4651b03).
 - Commits:
+- Follow-up (main): lock now also clears the search query, so the search row reopens closed and the list is unfiltered after unlock; extended `NotesViewModelTest.lockDiscardsTheEditorThePendingUndoAndTheSearch` (52003c5).
