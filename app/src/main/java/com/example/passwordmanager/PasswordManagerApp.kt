@@ -11,5 +11,6 @@ class PasswordManagerApp : Application() {
         super.onCreate()
         System.loadLibrary("sqlcipher")
         container = AppContainer(this)
+        container.autoLockObserver.start(this)
     }
 }

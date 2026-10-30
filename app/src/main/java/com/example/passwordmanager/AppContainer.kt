@@ -8,6 +8,7 @@ import com.example.passwordmanager.data.crypto.Argon2KeyDerivation
 import com.example.passwordmanager.data.crypto.BiometricKeyStore
 import com.example.passwordmanager.data.crypto.KdfParams
 import com.example.passwordmanager.data.crypto.VaultCrypto
+import com.example.passwordmanager.data.settings.SettingsStore
 import com.example.passwordmanager.data.vault.VaultHeaderStore
 import com.example.passwordmanager.data.vault.VaultSession
 
@@ -36,4 +37,10 @@ class AppContainer(context: Context) {
     )
 
     val credentialRepository = CredentialRepository(vaultSession)
+
+    val settingsStore = SettingsStore(
+        appContext.getSharedPreferences(SettingsStore.PREFS_NAME, Context.MODE_PRIVATE)
+    )
+
+    val autoLockObserver = AutoLockObserver(vaultSession, settingsStore)
 }
