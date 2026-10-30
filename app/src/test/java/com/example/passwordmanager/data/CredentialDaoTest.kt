@@ -123,6 +123,35 @@ class CredentialDaoTest {
         assertEquals(null, dao.getById(saved.id).first())
     }
 
+    @Test
+    fun insertSkippingDuplicatesMatchesWebsiteAndUsernameIgnoringCase() = runTest {
+        dao.upsertCredential(credential("github.com", dateCreated = 1, username = "alice"))
+
+        val inserted = dao.insertSkippingDuplicates(
+            listOf(
+                credential("GitHub.com", dateCreated = 2, username = "ALICE"),
+                credential("github.com", dateCreated = 3, username = "bob"),
+                credential("gitlab.com", dateCreated = 4, username = "alice"),
+                credential(" GITLAB.COM", dateCreated = 5, username = "Alice")
+            )
+        )
+
+        assertEquals(2, inserted)
+        assertEquals(
+            listOf("github.com/alice", "github.com/bob", "gitlab.com/alice"),
+            dao.getAll().map { "${it.website}/${it.username}" }
+        )
+    }
+
+    @Test
+    fun insertingTheSameCredentialsAgainInsertsNone() = runTest {
+        val credentials = listOf(credential("github.com", dateCreated = 1), credential("example.org", dateCreated = 2))
+
+        assertEquals(2, dao.insertSkippingDuplicates(credentials))
+        assertEquals(0, dao.insertSkippingDuplicates(credentials))
+        assertEquals(2, dao.getAll().size)
+    }
+
     private suspend fun searchWebsites(query: String): List<String> {
         val websites = dao.search(likePattern(query), sortByWebsite = false).first().map { it.website }
         println("search(\"$query\") -> $websites")
