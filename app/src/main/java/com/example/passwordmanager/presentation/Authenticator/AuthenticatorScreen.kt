@@ -3,12 +3,10 @@ package com.example.passwordmanager.presentation.Authenticator
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -96,15 +94,16 @@ private fun TotpRow(item: TotpCodeItem, onEvent: (AuthenticatorEvent) -> Unit) {
             onEvent(AuthenticatorEvent.CopyCode(account))
             showCopiedMessage(context, "Code")
         },
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier.fillMaxWidth(),
+        // Below the names rather than beside them, so an 8-digit code doesn't squeeze the issuer.
+        footer = {
+            Text(
+                text = groupedCode(item.code),
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.primary
+            )
+        }
     ) {
-        Text(
-            text = groupedCode(item.code),
-            style = MaterialTheme.typography.titleLarge,
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.align(Alignment.CenterVertically)
-        )
-        Spacer(modifier = Modifier.width(Spacing.s))
         Countdown(
             secondsRemaining = item.secondsRemaining,
             period = account.period,

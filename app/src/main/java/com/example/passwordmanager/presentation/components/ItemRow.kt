@@ -2,6 +2,7 @@ package com.example.passwordmanager.presentation.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
@@ -18,13 +19,17 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 
-/** A list row: monogram of [title], [title], [subtitle] (may span lines) and [trailing] actions. */
+/**
+ * A list row: monogram of [title], [title], [subtitle] (may span lines), optional [footer] below the
+ * subtitle, and [trailing] actions.
+ */
 @Composable
 fun ItemRow(
     title: String,
     subtitle: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    footer: (@Composable () -> Unit)? = null,
     trailing: @Composable RowScope.() -> Unit = {}
 ) {
     Surface(
@@ -35,8 +40,13 @@ fun ItemRow(
     ) {
         ListItem(
             headlineContent = { Text(text = title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-            supportingContent = if (subtitle.isEmpty()) null else {
-                { Text(text = subtitle) }
+            supportingContent = if (subtitle.isEmpty() && footer == null) null else {
+                {
+                    Column {
+                        if (subtitle.isNotEmpty()) Text(text = subtitle)
+                        footer?.invoke()
+                    }
+                }
             },
             leadingContent = { Monogram(title) },
             trailingContent = { Row(content = trailing) },
