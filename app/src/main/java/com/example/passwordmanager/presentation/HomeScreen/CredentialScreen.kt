@@ -91,9 +91,12 @@ fun CredentialScreen(
             }
         }
     ){
-        LazyColumn(contentPadding = it,
+        // Padding (not contentPadding) so the list is clipped below the search field instead of
+        // scrolling under it.
+        LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
+                .padding(it)
                 .padding(8.dp),
             verticalArrangement =  Arrangement.spacedBy(16.dp)
         ){
