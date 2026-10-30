@@ -78,6 +78,32 @@ class CredentialDatabaseMigrationTest {
         }
     }
 
+    @Test
+    fun version3DatabaseKeepsItsCredentialsAndNotesWithUpdatedAtZero() = runTest {
+        createDatabase(SCHEMA_3, version = 3) { db ->
+            db.insert("Note", null, ContentValues().apply {
+                put("title", "Wifi")
+                put("body", "on the box")
+                put("createdAt", 2L)
+                put("updatedAt", 2L)
+            })
+        }
+
+        val database = openCurrent()
+        try {
+            val credential = database.dao.getAll().single()
+            println("After migration: ${credential.website} dataCreate=${credential.dataCreate} updatedAt=${credential.updatedAt}")
+            assertEquals(CURRENT_VERSION, database.openHelper.readableDatabase.version)
+            assertEquals("github.com", credential.website)
+            assertEquals("gh-secret", credential.password)
+            assertEquals(1L, credential.dataCreate)
+            assertEquals(0L, credential.updatedAt)
+            assertEquals(listOf("Wifi"), database.noteDao.getAll().map { it.title })
+        } finally {
+            database.close()
+        }
+    }
+
     private fun openCurrent(): CredentialDatabase =
         Room.databaseBuilder(context, CredentialDatabase::class.java, DB_NAME)
             .allowMainThreadQueries()
@@ -110,9 +136,10 @@ class CredentialDatabaseMigrationTest {
 
     private companion object {
         const val DB_NAME = "migration-test.db"
-        const val CURRENT_VERSION = 3
+        const val CURRENT_VERSION = 4
         // Unit tests run with the module directory as the working directory.
         const val SCHEMA_1 = "schemas/com.example.passwordmanager.data.CredentialDatabase/1.json"
         const val SCHEMA_2 = "schemas/com.example.passwordmanager.data.CredentialDatabase/2.json"
+        const val SCHEMA_3 = "schemas/com.example.passwordmanager.data.CredentialDatabase/3.json"
     }
 }
