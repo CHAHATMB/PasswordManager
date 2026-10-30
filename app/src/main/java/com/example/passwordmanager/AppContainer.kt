@@ -12,10 +12,19 @@ import com.example.passwordmanager.data.settings.SettingsStore
 import com.example.passwordmanager.data.vault.UnlockThrottle
 import com.example.passwordmanager.data.vault.VaultHeaderStore
 import com.example.passwordmanager.data.vault.VaultSession
+import com.example.passwordmanager.data.vault.VaultState
+import com.example.passwordmanager.util.SecureClipboard
+import com.example.passwordmanager.util.SystemClipboard
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 
 class AppContainer(context: Context) {
 
     private val appContext = context.applicationContext
+
+    val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
     val biometricKeyStore = BiometricKeyStore()
 
@@ -48,4 +57,12 @@ class AppContainer(context: Context) {
     )
 
     val autoLockObserver = AutoLockObserver(vaultSession, settingsStore)
+
+    val secureClipboard = SecureClipboard(SystemClipboard(appContext), applicationScope)
+
+    init {
+        applicationScope.launch {
+            vaultSession.state.collect { if (it !is VaultState.Unlocked) secureClipboard.clearNow() }
+        }
+    }
 }
