@@ -8,6 +8,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.biometric.BiometricPrompt
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -48,6 +49,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.example.passwordmanager.data.settings.ThemeMode
 import com.example.passwordmanager.data.vault.VaultState
 import com.example.passwordmanager.presentation.AddScreen.AddCredentialScreen
 import com.example.passwordmanager.presentation.DetailScreen.CredentialDetailScreen
@@ -108,7 +110,12 @@ class MainActivity : FragmentActivity() {
         biometricPrompt = BiometricPromptUtils.createBiometricPrompt(this, ::onBiometricAuthenticated)
         setContent {
             val themeMode by settingsStore.themeMode.collectAsState()
-            AppTheme(themeMode = themeMode) {
+            val darkTheme = when (themeMode) {
+                ThemeMode.SYSTEM -> isSystemInDarkTheme()
+                ThemeMode.LIGHT -> false
+                ThemeMode.DARK -> true
+            }
+            AppTheme(darkTheme = darkTheme) {
                 val vaultState by lockViewModel.vaultState.collectAsState()
                 val lockState by lockViewModel.state.collectAsState()
                 // Each branch owns its own composition, so a state change drops the whole

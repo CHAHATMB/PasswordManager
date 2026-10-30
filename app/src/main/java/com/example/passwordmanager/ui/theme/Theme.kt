@@ -1,7 +1,6 @@
 package com.example.passwordmanager.ui.theme
 
 import android.app.Activity
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -9,16 +8,10 @@ import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
-import com.example.passwordmanager.data.settings.ThemeMode
 
 /** The app's only theme: static teal colours (no dynamic colour), Poppins type, shared shapes. */
 @Composable
-fun AppTheme(themeMode: ThemeMode, content: @Composable () -> Unit) {
-    val darkTheme = when (themeMode) {
-        ThemeMode.SYSTEM -> isSystemInDarkTheme()
-        ThemeMode.LIGHT -> false
-        ThemeMode.DARK -> true
-    }
+fun AppTheme(darkTheme: Boolean, content: @Composable () -> Unit) {
     val colorScheme = if (darkTheme) DarkColors else LightColors
     val view = LocalView.current
     if (!view.isInEditMode) {
