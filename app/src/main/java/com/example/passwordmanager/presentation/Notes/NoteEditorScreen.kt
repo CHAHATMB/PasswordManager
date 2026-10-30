@@ -1,12 +1,12 @@
 package com.example.passwordmanager.presentation.Notes
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
@@ -17,16 +17,23 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
-import com.example.passwordmanager.presentation.components.AppTextField
 import com.example.passwordmanager.presentation.components.AppTopBar
 import com.example.passwordmanager.ui.theme.Spacing
 import com.example.passwordmanager.util.NOTE_BODY_MAX_CHARS
@@ -38,7 +45,6 @@ private val sentenceKeyboard = KeyboardOptions(capitalization = KeyboardCapitali
 @Composable
 fun NoteEditorScreen(
     editor: NoteEditor,
-    autoTitle: (body: String) -> String,
     onEvent: (NotesEvent) -> Unit,
     onClose: () -> Unit,
     onDelete: () -> Unit
@@ -48,7 +54,7 @@ fun NoteEditorScreen(
     Scaffold(
         topBar = {
             AppTopBar(
-                title = if (editor.original == null) "New note" else "Edit note",
+                title = "",
                 navigationIcon = {
                     IconButton(onClick = onClose) {
                         Icon(imageVector = Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back")
@@ -79,35 +85,46 @@ fun NoteEditorScreen(
             )
         }
     ) {
+        val borderless = TextFieldDefaults.colors(
+            focusedContainerColor = Color.Transparent,
+            unfocusedContainerColor = Color.Transparent,
+            focusedIndicatorColor = Color.Transparent,
+            unfocusedIndicatorColor = Color.Transparent
+        )
+        val bodyFocus = remember { FocusRequester() }
+        LaunchedEffect(Unit) { if (editor.original == null) bodyFocus.requestFocus() }
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(it)
-                .padding(horizontal = Spacing.l, vertical = Spacing.s),
-            verticalArrangement = Arrangement.spacedBy(Spacing.s)
+                .padding(horizontal = Spacing.xs)
         ) {
-            AppTextField(
+            TextField(
                 value = editor.title,
                 onValueChange = { title -> onEvent(NotesEvent.ChangeTitle(title)) },
-                label = "Title",
-                placeholder = if (editor.title.isEmpty()) autoTitle(editor.body) else null,
-                keyboardOptions = sentenceKeyboard,
+                textStyle = MaterialTheme.typography.titleLarge,
+                placeholder = { Text(text = "Title", style = MaterialTheme.typography.titleLarge) },
+                singleLine = true,
+                keyboardOptions = sentenceKeyboard.copy(imeAction = ImeAction.Next),
+                keyboardActions = KeyboardActions(onNext = { bodyFocus.requestFocus() }),
+                colors = borderless,
                 modifier = Modifier.fillMaxWidth()
             )
-            AppTextField(
+            TextField(
                 value = editor.body,
                 onValueChange = { body -> onEvent(NotesEvent.ChangeBody(body)) },
-                label = "Note",
-                singleLine = false,
+                placeholder = { Text(text = "Note") },
                 keyboardOptions = sentenceKeyboard,
                 supportingText = if (editor.body.length >= BODY_COUNTER_FROM_CHARS) {
-                    "${editor.body.length} / $NOTE_BODY_MAX_CHARS"
+                    { Text(text = "${editor.body.length} / $NOTE_BODY_MAX_CHARS") }
                 } else {
                     null
                 },
+                colors = borderless,
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f)
+                    .focusRequester(bodyFocus)
             )
         }
     }

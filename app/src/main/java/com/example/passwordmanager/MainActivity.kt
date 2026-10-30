@@ -398,7 +398,6 @@ class MainActivity : FragmentActivity() {
                 notesViewModel.editor?.let { editor ->
                     NoteEditorScreen(
                         editor = editor,
-                        autoTitle = notesViewModel::autoTitle,
                         onEvent = notesViewModel::onEvent,
                         onClose = {
                             if (isCurrent()) {

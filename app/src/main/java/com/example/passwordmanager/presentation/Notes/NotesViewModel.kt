@@ -74,7 +74,7 @@ class NotesViewModel(
     }
 
     /** The title derived from [body]: an auto title follows it, and a blank title becomes it on save. */
-    fun autoTitle(body: String): String = deriveNoteTitle(body, LocalDate.now(clock), locale())
+    private fun autoTitle(body: String): String = deriveNoteTitle(body, LocalDate.now(clock), locale())
 
     /**
      * Opens the editor for note [id], or for a new note with [NoteRoutes.NEW_NOTE_ID]. Keeps an editor
