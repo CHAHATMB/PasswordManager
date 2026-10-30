@@ -32,6 +32,11 @@ class CredentialViewModel(private val repository: CredentialRepository) : ViewMo
         .map { CredentialState(credentials = it) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), CredentialState())
 
+    val favorites = isSortedByWebsite
+        .flatMapLatest { repository.getFavorites(it) }
+        .map { CredentialState(credentials = it) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), CredentialState())
+
     fun onEvent( event: CredentialEvent ){
         when(event){
 

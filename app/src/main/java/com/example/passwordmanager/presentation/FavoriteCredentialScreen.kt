@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Sort
 import androidx.compose.material3.Icon
@@ -57,17 +58,9 @@ fun FavoriteCredentialScreen(
                 .padding(8.dp),
             verticalArrangement =  Arrangement.spacedBy(16.dp)
         ){
-            items(state.credentials.size){
-                FavCredentialItem( state=state, index=it, onEvent = onEvent)
+            items(state.credentials, key = { credential -> credential.id }) { credential ->
+                CredentialItem(credential = credential, onEvent = onEvent)
             }
         }
-    }
-}
-
-@Composable
-fun FavCredentialItem(state: CredentialState, index: Int, onEvent: (CredentialEvent) -> Unit) {
-    val credential = state.credentials[index]
-    if( credential.isFav ) {
-        CredentialItem(credential = credential, onEvent = onEvent)
     }
 }

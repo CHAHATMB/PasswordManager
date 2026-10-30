@@ -230,8 +230,9 @@ class MainActivity : FragmentActivity() {
                 )
             }
             composable(NavigationItem.Favorite.route) {
+                val favorites by viewModel.favorites.collectAsState()
                 FavoriteCredentialScreen(
-                    state = state,
+                    state = favorites,
                     navController = navController,
                     onEvent = viewModel::onEvent
                 )
