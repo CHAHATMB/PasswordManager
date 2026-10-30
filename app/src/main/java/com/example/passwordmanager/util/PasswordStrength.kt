@@ -10,6 +10,9 @@ private const val STRONG_BITS = 80.0
 // Printable ASCII minus letters and digits; any other character also counts as a symbol.
 private const val SYMBOL_POOL_SIZE = 33
 
+// Long random passwords repeat characters by chance, so only short-range repeats (`aaa`, `abab`) count.
+private const val REPEAT_WINDOW = 3
+
 enum class PasswordStrength {
     Weak, Fair, Good, Strong;
 
@@ -28,7 +31,8 @@ enum class PasswordStrength {
 
 /**
  * Bits for a random pick from the pools the password uses, per counted character. A character
- * that already appeared, or that is one step from the previous one (`abc`, `321`), adds nothing.
+ * that appeared within the previous [REPEAT_WINDOW] characters, or that is one step from the
+ * previous one (`abc`, `321`), adds nothing.
  */
 private fun entropyBits(password: String): Double {
     var poolSize = 0
@@ -38,9 +42,8 @@ private fun entropyBits(password: String): Double {
     if (password.any { it !in 'a'..'z' && it !in 'A'..'Z' && it !in '0'..'9' }) poolSize += SYMBOL_POOL_SIZE
     if (poolSize == 0) return 0.0
 
-    val seen = HashSet<Char>()
     val counted = password.indices.count { index ->
-        val isRepeat = !seen.add(password[index])
+        val isRepeat = (maxOf(0, index - REPEAT_WINDOW) until index).any { password[it] == password[index] }
         val continuesSequence = index > 0 && abs(password[index] - password[index - 1]) == 1
         !isRepeat && !continuesSequence
     }
