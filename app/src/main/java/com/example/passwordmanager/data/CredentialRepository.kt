@@ -13,9 +13,15 @@ import kotlinx.coroutines.flow.flowOf
 
 class CredentialRepository(private val session: VaultSession) {
 
-    fun getOrderedByWebsite(): Flow<List<Credential>> = whileUnlocked { it.getOrderedByWebsite() }
+    /** Credentials whose website or username contains [query], ignoring case; all of them when blank. */
+    fun search(query: String, sortByWebsite: Boolean): Flow<List<Credential>> =
+        whileUnlocked(emptyList()) { it.search(likePattern(query), sortByWebsite) }
 
-    fun getOrderedByDateCreated(): Flow<List<Credential>> = whileUnlocked { it.getOrderedByDateCreated() }
+    fun getFavorites(sortByWebsite: Boolean): Flow<List<Credential>> =
+        whileUnlocked(emptyList()) { it.getFavorites(sortByWebsite) }
+
+    /** Emits null while locked or once the credential is deleted. */
+    fun getById(id: Int): Flow<Credential?> = whileUnlocked(null) { it.getById(id) }
 
     /** Throws [VaultException.Locked] when locked, including a lock that closes the DB mid-write. */
     suspend fun upsertCredential(credential: Credential) = write { it.upsertCredential(credential) }
@@ -24,9 +30,9 @@ class CredentialRepository(private val session: VaultSession) {
     suspend fun deleteCredential(credential: Credential) = write { it.deleteCredential(credential) }
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    private fun whileUnlocked(query: (CredentialDao) -> Flow<List<Credential>>): Flow<List<Credential>> =
+    private fun <T> whileUnlocked(lockedValue: T, query: (CredentialDao) -> Flow<T>): Flow<T> =
         session.state.flatMapLatest { state ->
-            if (state is VaultState.Unlocked) query(state.database.dao) else flowOf(emptyList())
+            if (state is VaultState.Unlocked) query(state.database.dao) else flowOf(lockedValue)
         }
 
     @VisibleForTesting
@@ -47,4 +53,13 @@ class CredentialRepository(private val session: VaultSession) {
     // A closed DB surfaces as IllegalStateException or SQLException; only a lock explains it.
     private fun lockedOr(e: Exception): Exception =
         if (session.state.value is VaultState.Unlocked) e else VaultException.Locked(e)
+}
+
+/** Escapes LIKE wildcards so `%` and `_` typed by the user match literally. */
+internal fun likePattern(query: String): String {
+    val escaped = query.trim()
+        .replace("\\", "\\\\")
+        .replace("%", "\\%")
+        .replace("_", "\\_")
+    return "%$escaped%"
 }

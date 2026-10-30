@@ -3,7 +3,7 @@ package com.example.passwordmanager.presentation
 import com.example.passwordmanager.data.Credential
 
 sealed interface CredentialEvent {
-    object SortCredentail: CredentialEvent
+    object SortCredential: CredentialEvent
 
     data class DeleteCredential( var credential: Credential): CredentialEvent
     data class SaveCredential(
@@ -15,6 +15,5 @@ sealed interface CredentialEvent {
 
     data class FavoriteCredential(var credential: Credential): CredentialEvent
 
-    data class OnSearchTextChange(var text: String): CredentialEvent
-    data object OnToogleSearch : CredentialEvent
+    data class OnSearchTextChange(val text: String): CredentialEvent
 }

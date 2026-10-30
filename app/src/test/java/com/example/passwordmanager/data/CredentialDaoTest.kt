@@ -35,11 +35,11 @@ class CredentialDaoTest {
     @Test
     fun upsertInsertsThenUpdates() = runTest {
         dao.upsertCredential(credential("github.com", dateCreated = 1))
-        val inserted = dao.getOrderedByDateCreated().first().single()
+        val inserted = dao.search(ALL, sortByWebsite = false).first().single()
 
         dao.upsertCredential(inserted.copy(password = "new-secret"))
 
-        val updated = dao.getOrderedByDateCreated().first().single()
+        val updated = dao.search(ALL, sortByWebsite = false).first().single()
         assertEquals(inserted.id, updated.id)
         assertEquals("new-secret", updated.password)
     }
@@ -48,11 +48,11 @@ class CredentialDaoTest {
     fun deleteRemovesOnlyThatCredential() = runTest {
         dao.upsertCredential(credential("github.com", dateCreated = 1))
         dao.upsertCredential(credential("example.com", dateCreated = 2))
-        val github = dao.getOrderedByDateCreated().first().first()
+        val github = dao.search(ALL, sortByWebsite = false).first().first()
 
         dao.deleteCredential(github)
 
-        assertEquals(listOf("example.com"), dao.getOrderedByDateCreated().first().map { it.website })
+        assertEquals(listOf("example.com"), dao.search(ALL, sortByWebsite = false).first().map { it.website })
     }
 
     @Test
@@ -63,28 +63,87 @@ class CredentialDaoTest {
 
         assertEquals(
             listOf("alpha.com", "mid.com", "zeta.com"),
-            dao.getOrderedByWebsite().first().map { it.website }
+            dao.search(ALL, sortByWebsite = true).first().map { it.website }
         )
         assertEquals(
             listOf("zeta.com", "mid.com", "alpha.com"),
-            dao.getOrderedByDateCreated().first().map { it.website }
+            dao.search(ALL, sortByWebsite = false).first().map { it.website }
         )
     }
 
     @Test
-    fun favoritesQueryReturnsOnlyFavorites() = runTest {
-        dao.upsertCredential(credential("fav.com", dateCreated = 1, isFav = true))
+    fun favoritesQueryReturnsOnlyFavoritesInTheChosenOrder() = runTest {
+        dao.upsertCredential(credential("zeta.com", dateCreated = 1, isFav = true))
         dao.upsertCredential(credential("plain.com", dateCreated = 2))
+        dao.upsertCredential(credential("alpha.com", dateCreated = 3, isFav = true))
 
-        assertEquals(listOf("fav.com"), dao.getFavoriteCredential().first().map { it.website })
+        assertEquals(listOf("zeta.com", "alpha.com"), dao.getFavorites(sortByWebsite = false).first().map { it.website })
+        assertEquals(listOf("alpha.com", "zeta.com"), dao.getFavorites(sortByWebsite = true).first().map { it.website })
     }
 
-    private fun credential(website: String, dateCreated: Long, isFav: Boolean = false) = Credential(
+    @Test
+    fun searchMatchesWebsiteOrUsernameIgnoringCase() = runTest {
+        dao.upsertCredential(credential("github.com", dateCreated = 1, username = "alice"))
+        dao.upsertCredential(credential("gitlab.com", dateCreated = 2, username = "bob"))
+        dao.upsertCredential(credential("example.org", dateCreated = 3, username = "GitFan"))
+
+        assertEquals(listOf("github.com"), searchWebsites("HUB"))
+        assertEquals(listOf("gitlab.com"), searchWebsites("Bo"))
+        assertEquals(listOf("github.com", "gitlab.com", "example.org"), searchWebsites("git"))
+        assertEquals(emptyList<String>(), searchWebsites("nomatch"))
+    }
+
+    @Test
+    fun blankSearchReturnsEverything() = runTest {
+        dao.upsertCredential(credential("github.com", dateCreated = 1))
+        dao.upsertCredential(credential("example.org", dateCreated = 2))
+
+        assertEquals(listOf("github.com", "example.org"), searchWebsites(""))
+        assertEquals(listOf("github.com", "example.org"), searchWebsites("   "))
+    }
+
+    @Test
+    fun searchTreatsLikeWildcardsLiterally() = runTest {
+        dao.upsertCredential(credential("my_site.com", dateCreated = 1))
+        dao.upsertCredential(credential("myxsite.com", dateCreated = 2))
+        dao.upsertCredential(credential("100%.com", dateCreated = 3))
+
+        assertEquals(listOf("my_site.com"), searchWebsites("my_"))
+        assertEquals(listOf("100%.com"), searchWebsites("%"))
+        assertEquals(emptyList<String>(), searchWebsites("\\"))
+    }
+
+    @Test
+    fun getByIdEmitsTheCredentialThenNullAfterDelete() = runTest {
+        dao.upsertCredential(credential("github.com", dateCreated = 1))
+        val saved = dao.search(ALL, sortByWebsite = false).first().single()
+
+        assertEquals(saved, dao.getById(saved.id).first())
+        dao.deleteCredential(saved)
+        assertEquals(null, dao.getById(saved.id).first())
+    }
+
+    private suspend fun searchWebsites(query: String): List<String> {
+        val websites = dao.search(likePattern(query), sortByWebsite = false).first().map { it.website }
+        println("search(\"$query\") -> $websites")
+        return websites
+    }
+
+    private fun credential(
+        website: String,
+        dateCreated: Long,
+        isFav: Boolean = false,
+        username: String = "user@$website"
+    ) = Credential(
         website = website,
-        username = "user@$website",
+        username = username,
         password = "secret-$website",
         dataCreate = dateCreated,
         isFav = isFav,
         note = ""
     )
+
+    private companion object {
+        val ALL = likePattern("")
+    }
 }

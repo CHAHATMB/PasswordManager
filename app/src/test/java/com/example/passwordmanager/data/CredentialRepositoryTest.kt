@@ -41,8 +41,8 @@ class CredentialRepositoryTest {
     fun flowsEmitEmptyWhileNotSetUp() = runTest {
         val repository = CredentialRepository(newSession())
 
-        assertEquals(emptyList<Credential>(), repository.getOrderedByDateCreated().first())
-        assertEquals(emptyList<Credential>(), repository.getOrderedByWebsite().first())
+        assertEquals(emptyList<Credential>(), repository.search("", sortByWebsite = false).first())
+        assertEquals(emptyList<Credential>(), repository.search("", sortByWebsite = true).first())
     }
 
     @Test
@@ -55,8 +55,8 @@ class CredentialRepositoryTest {
         val repository = CredentialRepository(lockedSession)
 
         assertEquals(VaultState.Locked, lockedSession.state.value)
-        assertEquals(emptyList<Credential>(), repository.getOrderedByDateCreated().first())
-        assertEquals(emptyList<Credential>(), repository.getOrderedByWebsite().first())
+        assertEquals(emptyList<Credential>(), repository.search("", sortByWebsite = false).first())
+        assertEquals(emptyList<Credential>(), repository.search("", sortByWebsite = true).first())
     }
 
     @Test
@@ -107,7 +107,7 @@ class CredentialRepositoryTest {
 
         val relaunchedSession = newSession()
         relaunchedSession.unlock(password.toCharArray())
-        val stored = CredentialRepository(relaunchedSession).getOrderedByDateCreated().first()
+        val stored = CredentialRepository(relaunchedSession).search("", sortByWebsite = false).first()
 
         assertEquals(1, stored.size)
         assertEquals("github.com", stored[0].website)
@@ -121,11 +121,11 @@ class CredentialRepositoryTest {
         session.setup(password.toCharArray())
         val repository = CredentialRepository(session)
         repository.upsertCredential(credential("github.com"))
-        val saved = repository.getOrderedByWebsite().first().single()
+        val saved = repository.search("", sortByWebsite = true).first().single()
 
         repository.deleteCredential(saved)
 
-        assertTrue(repository.getOrderedByWebsite().first().isEmpty())
+        assertTrue(repository.search("", sortByWebsite = true).first().isEmpty())
     }
 
     private suspend fun writeFailure(repository: CredentialRepository, action: suspend () -> Unit): Exception? =

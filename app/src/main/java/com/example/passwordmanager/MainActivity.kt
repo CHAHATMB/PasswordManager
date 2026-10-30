@@ -214,8 +214,10 @@ class MainActivity : FragmentActivity() {
             startDestination = NavigationItem.Home.route
         ) {
             composable(NavigationItem.Home.route) {
+                val searchText by viewModel.searchText.collectAsState()
                 CredentialScreen(
                     state = state,
+                    searchText = searchText,
                     navController = navController,
                     onEvent = viewModel::onEvent,
                     onLock = lockViewModel::lock

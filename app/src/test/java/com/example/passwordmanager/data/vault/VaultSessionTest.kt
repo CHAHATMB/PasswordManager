@@ -116,12 +116,12 @@ class VaultSessionTest {
         val repository = CredentialRepository(session)
         session.setup(password.toCharArray())
         repository.upsertCredential(Credential(website = "a.com", username = "u", password = "p", dataCreate = 1, note = ""))
-        assertEquals(1, repository.getOrderedByWebsite().first().size)
+        assertEquals(1, repository.search("", sortByWebsite = true).first().size)
 
         session.lock()
 
-        assertTrue(repository.getOrderedByWebsite().first().isEmpty())
-        assertTrue(repository.getOrderedByDateCreated().first().isEmpty())
+        assertTrue(repository.search("", sortByWebsite = true).first().isEmpty())
+        assertTrue(repository.search("", sortByWebsite = false).first().isEmpty())
     }
 
     @Test

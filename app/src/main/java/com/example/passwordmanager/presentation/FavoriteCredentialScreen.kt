@@ -45,7 +45,7 @@ fun FavoriteCredentialScreen(
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.primary
                 )
-                IconButton(onClick = { onEvent(CredentialEvent.SortCredentail) }) {
+                IconButton(onClick = { onEvent(CredentialEvent.SortCredential) }) {
                     Icon(imageVector = Icons.Rounded.Sort, contentDescription = null, modifier = Modifier.size(35.dp), tint = MaterialTheme.colorScheme.secondary)
                 }
             }
