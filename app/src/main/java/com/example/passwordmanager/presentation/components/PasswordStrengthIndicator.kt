@@ -20,7 +20,7 @@ fun PasswordStrengthIndicator(password: String, modifier: Modifier = Modifier) {
 }
 
 @Composable
-fun PasswordStrengthIndicator(strength: PasswordStrength, modifier: Modifier = Modifier) {
+fun PasswordStrengthIndicator(strength: PasswordStrength, modifier: Modifier = Modifier, bits: Double? = null) {
     val color = strength.color()
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
         LinearProgressIndicator(
@@ -29,7 +29,8 @@ fun PasswordStrengthIndicator(strength: PasswordStrength, modifier: Modifier = M
             color = color,
             trackColor = MaterialTheme.colorScheme.surfaceVariant
         )
-        Text(text = "Strength: ${strength.name}", color = color, style = MaterialTheme.typography.bodySmall)
+        val label = if (bits == null) "Strength: ${strength.name}" else "Strength: ${strength.name} · ${bits.toInt()} bits"
+        Text(text = label, color = color, style = MaterialTheme.typography.bodySmall)
     }
 }
 
