@@ -12,3 +12,6 @@ fun validateMasterPassword(password: String, confirmation: String): MasterPasswo
 
 fun isCredentialFormValid(website: String, password: String): Boolean =
     website.isNotBlank() && password.isNotBlank()
+
+/** An edited authenticator account needs an issuer or an account name, or its row would have no title. */
+fun isTotpEditValid(issuer: String, accountName: String): Boolean = issuer.isNotBlank() || accountName.isNotBlank()

@@ -50,6 +50,9 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.passwordmanager.data.settings.ThemeMode
 import com.example.passwordmanager.data.vault.VaultState
+import com.example.passwordmanager.presentation.Authenticator.AuthenticatorEvent
+import com.example.passwordmanager.presentation.Authenticator.AuthenticatorScreen
+import com.example.passwordmanager.presentation.Authenticator.AuthenticatorViewModel
 import com.example.passwordmanager.presentation.AddScreen.AddCredentialScreen
 import com.example.passwordmanager.presentation.DetailScreen.CredentialDetailScreen
 import com.example.passwordmanager.presentation.HomeScreen.CredentialScreen
@@ -72,15 +75,22 @@ import com.example.passwordmanager.presentation.SettingsScreen.SettingsViewModel
 import com.example.passwordmanager.presentation.components.rememberIsKeyboardOpen
 import com.example.passwordmanager.ui.theme.AppTheme
 import com.example.passwordmanager.util.BiometricPromptUtils
+import com.google.zxing.client.android.Intents
+import com.journeyapps.barcodescanner.ScanContract
+import com.journeyapps.barcodescanner.ScanOptions
 import javax.crypto.Cipher
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+
+private const val QR_IMAGE_MIME_TYPE = "image/*"
+private val FAB_ROUTES = setOf(NavigationItem.Home.route, NavigationItem.Favorite.route, NavigationItem.Authenticator.route)
 
 class MainActivity : FragmentActivity() {
 
     private val lockViewModel by viewModels<LockViewModel> { LockViewModel.Factory }
     private val viewModel by viewModels<CredentialViewModel> { CredentialViewModel.Factory }
     private val settingsViewModel by viewModels<SettingsViewModel> { SettingsViewModel.Factory }
+    private val authenticatorViewModel by viewModels<AuthenticatorViewModel> { AuthenticatorViewModel.Factory }
 
     private val autoLockObserver get() = (application as PasswordManagerApp).container.autoLockObserver
     private val settingsStore get() = (application as PasswordManagerApp).container.settingsStore
@@ -95,6 +105,14 @@ class MainActivity : FragmentActivity() {
     }
     private val openCsvLauncher = registerForActivityResult(ActivityResultContracts.OpenDocument()) {
         onBackupPicked(BackupEvent.ImportCsv(it))
+    }
+    private val scanQrCodeLauncher = registerForActivityResult(ScanContract()) { result ->
+        val isCameraPermissionMissing = result.originalIntent?.hasExtra(Intents.Scan.MISSING_CAMERA_PERMISSION) == true
+        authenticatorViewModel.onEvent(AuthenticatorEvent.QrScanned(result.contents, isCameraPermissionMissing))
+    }
+    private val scanImageLauncher = registerForActivityResult(ActivityResultContracts.OpenDocument()) {
+        autoLockObserver.endAppTrip()
+        authenticatorViewModel.onEvent(AuthenticatorEvent.ImagePicked(it))
     }
 
     private lateinit var biometricPrompt: BiometricPrompt
@@ -160,6 +178,27 @@ class MainActivity : FragmentActivity() {
         }
     }
 
+    // The scanner runs in this process, so it is not an app trip for the auto-lock.
+    private fun openQrScanner() {
+        val options = ScanOptions()
+            .setCaptureActivity(SecureCaptureActivity::class.java)
+            .setDesiredBarcodeFormats(ScanOptions.QR_CODE)
+            .setBeepEnabled(false)
+            .setPrompt("Scan the QR code shown by the website")
+            // A denied permission comes back as a result, and the Authenticator tab explains it.
+            .addExtra(Intents.Scan.SHOW_MISSING_CAMERA_PERMISSION_DIALOG, false)
+        scanQrCodeLauncher.launch(options)
+    }
+
+    private fun openImagePicker() {
+        autoLockObserver.expectAppTrip()
+        try {
+            scanImageLauncher.launch(arrayOf(QR_IMAGE_MIME_TYPE))
+        } catch (e: ActivityNotFoundException) {
+            autoLockObserver.endAppTrip()
+        }
+    }
+
     private fun onBackupPicked(event: BackupEvent) {
         autoLockObserver.endAppTrip()
         settingsViewModel.onBackupEvent(event)
@@ -202,13 +241,12 @@ class MainActivity : FragmentActivity() {
         // Hidden on Edit and while typing (e.g. Home search): with adjustResize the bar and
         // FAB would ride above the keyboard.
         val isBottomBarVisible = currentRoute != CredentialRoutes.EDIT && !isKeyboardOpen
-        val isFabVisible = isBottomBarVisible &&
-            (currentRoute == NavigationItem.Home.route || currentRoute == NavigationItem.Favorite.route)
+        val isFabVisible = isBottomBarVisible && currentRoute in FAB_ROUTES
         Scaffold(modifier = Modifier.fillMaxSize(),
             snackbarHost = { SnackbarHost(snackbarHostState) },
             bottomBar = {
                 if (isBottomBarVisible) NavigationBar {
-                    listOf(NavigationItem.Home, NavigationItem.Favorite).forEach { item ->
+                    listOf(NavigationItem.Home, NavigationItem.Favorite, NavigationItem.Authenticator).forEach { item ->
                         val isSelected = currentRoute == item.route
                         NavigationBarItem(
                             selected = isSelected,
@@ -232,7 +270,13 @@ class MainActivity : FragmentActivity() {
                 }
             },
             floatingActionButton = {
-                if (isFabVisible) FloatingActionButton(onClick = { viewModel.onEvent(CredentialEvent.OpenAddSheet) }) {
+                if (isFabVisible) FloatingActionButton(onClick = {
+                    if (currentRoute == NavigationItem.Authenticator.route) {
+                        authenticatorViewModel.onEvent(AuthenticatorEvent.OpenAddOptions)
+                    } else {
+                        viewModel.onEvent(CredentialEvent.OpenAddSheet)
+                    }
+                }) {
                     Icon(Icons.Filled.Add, contentDescription = "Add")
                 }
             },
@@ -294,6 +338,16 @@ class MainActivity : FragmentActivity() {
                     state = favorites,
                     navController = navController,
                     onEvent = viewModel::onEvent
+                )
+            }
+            composable(NavigationItem.Authenticator.route) {
+                val authenticatorState by authenticatorViewModel.state.collectAsState()
+                AuthenticatorScreen(
+                    state = authenticatorState,
+                    dialog = authenticatorViewModel.dialog,
+                    onEvent = authenticatorViewModel::onEvent,
+                    onScanQrCode = ::openQrScanner,
+                    onScanImage = ::openImagePicker
                 )
             }
             composable(

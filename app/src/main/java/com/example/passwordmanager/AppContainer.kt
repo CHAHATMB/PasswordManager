@@ -16,6 +16,7 @@ import com.example.passwordmanager.data.vault.UnlockThrottle
 import com.example.passwordmanager.data.vault.VaultHeaderStore
 import com.example.passwordmanager.data.vault.VaultSession
 import com.example.passwordmanager.data.vault.VaultState
+import com.example.passwordmanager.util.QrImageReader
 import com.example.passwordmanager.util.SecureClipboard
 import com.example.passwordmanager.util.SystemClipboard
 import kotlinx.coroutines.CoroutineScope
@@ -76,6 +77,8 @@ class AppContainer(context: Context) {
     val autoLockObserver = AutoLockObserver(vaultSession, settingsStore)
 
     val secureClipboard = SecureClipboard(SystemClipboard(appContext), applicationScope)
+
+    val qrImageReader = QrImageReader(appContext.contentResolver)
 
     init {
         applicationScope.launch {
