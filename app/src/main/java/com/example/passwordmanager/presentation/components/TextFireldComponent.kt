@@ -28,7 +28,7 @@ fun TextFieldAndLabel(
     placeholderText: String = "",
     labelText: String = "",
     leadingIcon: ImageVector = Icons.Outlined.Mail,
-    onChange: (String) -> Unit = { println(it) },
+    onChange: (String) -> Unit = {},
 ){
     Column(modifier = Modifier.padding(vertical = 8.dp)) {
         Text(
@@ -65,7 +65,7 @@ fun TextFieldAndLabel(
 @Composable
 fun SearchField(
     value: String ,
-    onChange: (String)->Unit = {println(it)}
+    onChange: (String)->Unit = {}
 ){
     Column(modifier = Modifier.padding(vertical = 8.dp)) {
         OutlinedTextField(
