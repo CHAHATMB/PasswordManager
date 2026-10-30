@@ -45,9 +45,6 @@ import androidx.navigation.NavController
 import com.example.passwordmanager.presentation.CredentialEvent
 import com.example.passwordmanager.presentation.CredentialState
 import com.example.passwordmanager.util.BiometricPromptUtils
-import com.example.passwordmanager.util.CryptoManager
-
-val cryptoManager = CryptoManager()
 
 @RequiresApi(Build.VERSION_CODES.P)
 @Composable

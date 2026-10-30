@@ -5,7 +5,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.passwordmanager.data.Credential
 import com.example.passwordmanager.data.CredentialDao
-import com.example.passwordmanager.util.CryptoManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
@@ -18,7 +17,6 @@ import kotlinx.coroutines.launch
 
 class CredentialViewModel ( private var dao:CredentialDao): ViewModel() {
 
-    private val cryptoManager = CryptoManager()
     private var isSortedByDateCreate = MutableStateFlow(true)
 
     private var credentials  = isSortedByDateCreate.flatMapLatest { value ->

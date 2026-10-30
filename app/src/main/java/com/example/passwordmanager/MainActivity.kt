@@ -60,7 +60,6 @@ import com.example.passwordmanager.presentation.FavoriteCredentialScreen
 import com.example.passwordmanager.presentation.NavigationItem
 import com.example.passwordmanager.ui.theme.PasswordManagerTheme
 import com.example.passwordmanager.ui.theme.shapes.BottomNavCustomShape
-import com.example.passwordmanager.util.CryptographyManager
 import kotlinx.coroutines.delay
 
 class MainActivity : FragmentActivity() {
