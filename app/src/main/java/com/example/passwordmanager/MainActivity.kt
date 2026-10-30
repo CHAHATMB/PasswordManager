@@ -379,9 +379,11 @@ class MainActivity : FragmentActivity() {
             composable(NavigationItem.Notes.route) {
                 val notesState by notesViewModel.state.collectAsState()
                 val searchText by notesViewModel.searchText.collectAsState()
+                val notesLayout by notesViewModel.layout.collectAsState()
                 NotesScreen(
                     state = notesState,
                     searchText = searchText,
+                    layout = notesLayout,
                     onEvent = notesViewModel::onEvent,
                     onOpen = { id -> navController.navigate(NoteRoutes.editor(id)) }
                 )

@@ -20,8 +20,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 
 /**
- * A list row: monogram of [title], [title], [subtitle] (up to [subtitleMaxLines] lines), optional [footer]
- * below the subtitle, and [trailing] actions.
+ * A list row: monogram of [title], [title], [subtitle] (may span lines), optional [footer] below the
+ * subtitle, and [trailing] actions.
  */
 @Composable
 fun ItemRow(
@@ -29,7 +29,6 @@ fun ItemRow(
     subtitle: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    subtitleMaxLines: Int = Int.MAX_VALUE,
     footer: (@Composable () -> Unit)? = null,
     trailing: @Composable RowScope.() -> Unit = {}
 ) {
@@ -44,7 +43,7 @@ fun ItemRow(
             supportingContent = if (subtitle.isEmpty() && footer == null) null else {
                 {
                     Column {
-                        if (subtitle.isNotEmpty()) Text(text = subtitle, maxLines = subtitleMaxLines, overflow = TextOverflow.Ellipsis)
+                        if (subtitle.isNotEmpty()) Text(text = subtitle)
                         footer?.invoke()
                     }
                 }

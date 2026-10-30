@@ -9,6 +9,7 @@ import com.example.passwordmanager.data.crypto.TEST_KDF_PARAMS
 import com.example.passwordmanager.data.crypto.VaultCrypto
 import com.example.passwordmanager.data.notes.Note
 import com.example.passwordmanager.data.notes.NoteRepository
+import com.example.passwordmanager.data.settings.SettingsStore
 import com.example.passwordmanager.data.vault.VaultHeaderStore
 import com.example.passwordmanager.data.vault.VaultSession
 import com.example.passwordmanager.presentation.NoteRoutes
@@ -285,6 +286,7 @@ class NotesViewModelTest {
         return NotesViewModel(
             repository,
             session.state,
+            SettingsStore(context.getSharedPreferences(SettingsStore.PREFS_NAME, Context.MODE_PRIVATE)),
             clock = object : Clock() {
                 override fun getZone() = ZoneOffset.UTC
                 override fun withZone(zone: java.time.ZoneId?) = this

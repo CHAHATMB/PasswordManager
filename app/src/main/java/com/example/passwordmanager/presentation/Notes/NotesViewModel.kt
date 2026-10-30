@@ -11,6 +11,8 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.passwordmanager.PasswordManagerApp
 import com.example.passwordmanager.data.notes.Note
 import com.example.passwordmanager.data.notes.NoteRepository
+import com.example.passwordmanager.data.settings.NotesLayout
+import com.example.passwordmanager.data.settings.SettingsStore
 import com.example.passwordmanager.data.vault.VaultException
 import com.example.passwordmanager.data.vault.VaultState
 import com.example.passwordmanager.presentation.NoteRoutes
@@ -37,6 +39,7 @@ import kotlinx.coroutines.launch
 class NotesViewModel(
     private val repository: NoteRepository,
     private val vaultState: StateFlow<VaultState>,
+    private val settingsStore: SettingsStore,
     private val clock: Clock = Clock.systemDefaultZone(),
     private val locale: () -> Locale = Locale::getDefault
 ) : ViewModel() {
@@ -48,6 +51,8 @@ class NotesViewModel(
         .flatMapLatest { repository.search(it) }
         .map { NotesState(notes = it, isLoaded = true) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), NotesState())
+
+    val layout: StateFlow<NotesLayout> = settingsStore.notesLayout
 
     private val _deletedNotes = Channel<Note>(Channel.BUFFERED)
     /** Each note right after it is deleted, so the UI can offer Undo. */
@@ -129,6 +134,7 @@ class NotesViewModel(
                 }
             }
             is NotesEvent.RestoreNote -> write { repository.upsertNote(event.note) }
+            is NotesEvent.ChangeLayout -> settingsStore.setNotesLayout(event.layout)
         }
     }
 
@@ -146,7 +152,7 @@ class NotesViewModel(
         val Factory = viewModelFactory {
             initializer {
                 val container = (this[APPLICATION_KEY] as PasswordManagerApp).container
-                NotesViewModel(container.noteRepository, container.vaultSession.state)
+                NotesViewModel(container.noteRepository, container.vaultSession.state, container.settingsStore)
             }
         }
     }

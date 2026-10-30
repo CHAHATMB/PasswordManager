@@ -2,6 +2,7 @@ package com.example.passwordmanager.presentation.Notes
 
 import com.example.passwordmanager.data.notes.Note
 import com.example.passwordmanager.data.notes.NoteSummary
+import com.example.passwordmanager.data.settings.NotesLayout
 
 data class NotesState(
     val notes: List<NoteSummary> = emptyList(),
@@ -39,4 +40,5 @@ sealed interface NotesEvent {
     /** Deletes the editor's stored note and closes the editor. */
     data object DeleteNote : NotesEvent
     data class RestoreNote(val note: Note) : NotesEvent
+    data class ChangeLayout(val layout: NotesLayout) : NotesEvent
 }
