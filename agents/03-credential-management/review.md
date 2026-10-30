@@ -31,3 +31,33 @@ Notes (no action):
 - [x] Critical business logic has unit tests; no needless tests (DAO search, edit and restore, the cancellation mapping, and the clipboard timer and ownership checks, all with virtual time)
 - [x] Commit messages follow convention and are concise (all subjects 72 characters or fewer, no bodies; see finding 7)
 - [x] Build + unit tests pass (`./gradlew assembleDebug testDebugUnitTest`: 81 tests, 0 failures)
+
+## Round 2
+- Commit range reviewed: a52b79a..b008e2f
+- Verdict: APPROVED
+
+### Round 1 findings
+- #1 fixed: `BoxWithConstraints` plus `verticalScroll().heightIn(min = maxHeight)` centres the content and still scrolls. The modifier order is correct (scroll before the min height, padding inside it).
+- #2 stray Undo fixed: the ViewModel drains `_deletedCredentials` on any non-`Unlocked` state. `Unlocked` is a class, so each unlock is a new value and is never conflated away.
+- #2 double delete fixed: `isCurrent()` guards Back and Delete. Popping before sending the event is safe because `it` is already captured.
+- #4 fixed: the comment now matches the retry behaviour.
+- #6 fixed: only the favourites-query assertion is left, and the debug print shows website names only.
+- #3, #5, #7 not changed, per the coordinator. #3 is recorded as a known limitation in the dev-log.
+
+### Findings
+| # | Severity (blocker/major/minor) | File:line | Issue | Suggested fix |
+|---|---|---|---|---|
+| 1 | minor | presentation/CredentialViewModel.kt:70-73 | If Lock is tapped while `deleteCredential` is still in flight, the drain can run before `send`. The credential is then buffered and offers Undo after unlock. The window is a single DB write, so this is unlikely. | Optional: send only if `vaultState.value is VaultState.Unlocked` (store `vaultState` as a property). |
+| 2 | minor | MainActivity.kt:278 | Detail's `onEdit` is not guarded, so a double tap pushes two Edit entries. This predates the round and is outside its scope. | Optional: apply the same `isCurrent()` guard. |
+
+Notes (no action):
+- No over-engineering. Each fix is minimal and is its own `fix:` commit. All subjects are 72 characters or fewer.
+- No new tests. That is acceptable, because the changes are UI, navigation and channel wiring.
+
+### Checklist
+- [x] Correctness / no obvious bugs (minors only)
+- [x] Simple, no over-engineering, matches codebase style
+- [x] Security (no new secret exposure; the test print shows websites only)
+- [x] Tests appropriate (one trivial-assertion cleanup, nothing needless added)
+- [x] Commit messages follow convention and are concise
+- [x] Unit tests pass (`./gradlew testDebugUnitTest`: 81 tests, 0 failures)
