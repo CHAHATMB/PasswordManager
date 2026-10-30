@@ -107,5 +107,34 @@
     14. `adb logcat` during 3–13 → no generated values, `password` or `correcthorse`.
 
 ## Round 2 (fixes from review/verify)
-- Addressed findings:
-- Commits:
+- Addressed findings (review.md Round 1):
+  - #1 (major): a repeat now counts as zero only if the same character appeared within the previous 3 characters (`REPEAT_WINDOW`). The ±1 sequence rule is unchanged. `aaaa`, `abab` and `abcabc` are still caught.
+  - #2: `PasswordStrengthIndicator` has an overload that takes a `PasswordStrength`. Setup computes the level once and passes it in.
+  - #3: the length test uses `assertThrows`.
+  - #4 (seeding non-uniformity): not changed, per the coordinator.
+- Scores now (bands unchanged):
+  - `correcthorse1` → Fair (56.9 bits; was Weak).
+  - `password` → Weak (32.9).
+  - `Kx9#mP2$vL7q` → Good (78.8).
+- Simulated with a Python mirror of the scorer, 20 000 uniform random strings each:
+  - 64 digits: Strong 99.99 %.
+  - 20 lowercase: Good 67 %, Strong 32 %, Fair 0.75 %.
+  - 20 of all four classes: Strong 100 %.
+  - 12 of all four classes: Good 98 %, Fair 2 %.
+- Remaining limitation: 20 random digits (≈ 66 bits true) still score Weak about 54 % of the time and Fair 46 %. The ±1 sequence rule hits 2 in 10 digit pairs, and the pool is small. A digits-only preview in the generator sheet will often show Weak/Fair. I left this alone because the instruction was only to keep the sequence rule. Narrowing the sequence rule to runs of 3 or more would fix it.
+- Commits (`e2fe459..HEAD`):
+  - 9cb2ed2 fix: discount only short-range repeats in the strength score
+  - 550b0b2 refactor: compute the setup password strength once
+  - 6edc1ba test: use assertThrows for the generator length check
+  - plus this `docs:` commit
+- Tests: 97, 0 failures (+2).
+  - `PasswordStrengthTest` now has 9 tests, using fixed strings:
+    - `aaaaaaaa`, `aaaaaaaaaaaa` and `abababababab` → Weak
+    - `abcdefgh`, `abcdefghijkl` and `987654321098` → Weak
+    - a fixed 64-digit random string is not Weak
+    - three fixed random 20-character lowercase strings are Good or Strong
+  - The earlier band tests and the 100 generated defaults → Strong still pass.
+- Build/test result: `./gradlew assembleDebug testDebugUnitTest` → PASS. Each commit compiled, and its tests were run.
+- Verifier changes to the Round 1 flow:
+  - Step 2: `correcthorse1` now shows "Strength: Fair" with no warning.
+  - Step 5: with Symbols and Digits off, the preview strength should be Good or Strong.
