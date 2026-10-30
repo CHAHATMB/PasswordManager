@@ -1,5 +1,6 @@
 package com.example.passwordmanager.presentation.AddScreen
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -10,7 +11,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -18,6 +23,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.style.TextOverflow
 import com.example.passwordmanager.data.Credential
 import com.example.passwordmanager.presentation.CredentialDraft
 import com.example.passwordmanager.presentation.CredentialEvent
@@ -28,6 +38,7 @@ import com.example.passwordmanager.presentation.components.PasswordStrengthIndic
 import com.example.passwordmanager.presentation.components.PasswordTextField
 import com.example.passwordmanager.presentation.isCredentialFormValid
 import com.example.passwordmanager.ui.theme.Spacing
+import com.example.passwordmanager.util.WebsiteCatalog
 
 /** Adds a new credential, or edits [editing] in place when it is set. The input lives in local state. */
 @Composable
@@ -100,12 +111,7 @@ private fun TextFields(
                 .padding(horizontal = Spacing.l),
             verticalArrangement = Arrangement.spacedBy(Spacing.m)
         ) {
-            AppTextField(
-                value = website,
-                onValueChange = { onDraftChange(draft.copy(website = it)) },
-                label = "Website",
-                modifier = Modifier.fillMaxWidth()
-            )
+            WebsiteField(website = website, onWebsiteChange = { onDraftChange(draft.copy(website = it)) })
             AppTextField(
                 value = username,
                 onValueChange = { onDraftChange(draft.copy(username = it)) },
@@ -152,6 +158,54 @@ private fun TextFields(
                 onSaved()
             }) {
             Text(text = "Save")
+        }
+    }
+}
+
+/** The Website field with catalog suggestions below it while it is focused. */
+@Composable
+private fun WebsiteField(website: String, onWebsiteChange: (String) -> Unit) {
+    // The draft holds only the text; the selection lives here so picking a suggestion can move the cursor to the end.
+    var field by remember { mutableStateOf(TextFieldValue(website, TextRange(website.length))) }
+    val value = if (field.text == website) field else TextFieldValue(website, TextRange(website.length))
+    var isFocused by remember { mutableStateOf(false) }
+    val suggestions = remember(website) {
+        val term = WebsiteCatalog.normalize(website)
+        WebsiteCatalog.suggest(website).takeUnless { matches -> matches.any { it.domain == term } }.orEmpty()
+    }
+
+    Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+        AppTextField(
+            value = value,
+            onValueChange = {
+                field = it
+                onWebsiteChange(it.text)
+            },
+            label = "Website",
+            modifier = Modifier
+                .fillMaxWidth()
+                .onFocusChanged { isFocused = it.isFocused }
+        )
+        if (isFocused && suggestions.isNotEmpty()) {
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = MaterialTheme.shapes.medium,
+                color = MaterialTheme.colorScheme.surfaceContainerLow
+            ) {
+                Column {
+                    suggestions.forEach { suggestion ->
+                        ListItem(
+                            headlineContent = { Text(text = suggestion.name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                            supportingContent = { Text(text = suggestion.domain, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                            modifier = Modifier.clickable {
+                                field = TextFieldValue(suggestion.domain, TextRange(suggestion.domain.length))
+                                onWebsiteChange(suggestion.domain)
+                            },
+                            colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                        )
+                    }
+                }
+            }
         }
     }
 }
