@@ -63,4 +63,27 @@ class SettingsStoreTest {
 
         assertEquals(ThemeMode.SYSTEM, SettingsStore(prefs).themeMode.value)
     }
+
+    @Test
+    fun defaultNotesLayoutIsGrid() {
+        assertEquals(NotesLayout.GRID, SettingsStore(prefs).notesLayout.value)
+    }
+
+    @Test
+    fun everyNotesLayoutSurvivesRoundTrip() {
+        NotesLayout.entries.forEach { layout ->
+            val store = SettingsStore(prefs)
+            store.setNotesLayout(layout)
+
+            assertEquals("observed by the same store", layout, store.notesLayout.value)
+            assertEquals("read back by a new store", layout, SettingsStore(prefs).notesLayout.value)
+        }
+    }
+
+    @Test
+    fun unknownStoredNotesLayoutFallsBackToGrid() {
+        prefs.edit().putString("notes_layout", "MASONRY").commit()
+
+        assertEquals(NotesLayout.GRID, SettingsStore(prefs).notesLayout.value)
+    }
 }
