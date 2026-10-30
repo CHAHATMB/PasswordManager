@@ -72,13 +72,40 @@ class CredentialDaoTest {
     }
 
     @Test
-    fun favoritesQueryReturnsOnlyFavoritesInTheChosenOrder() = runTest {
+    fun recentlyModifiedPutsEditedRowsFirstAndFallsBackToDateCreatedForLegacyRows() = runTest {
+        dao.upsertCredential(credential("old-edited.com", dateCreated = 1, updatedAt = 50))
+        dao.upsertCredential(credential("legacy.com", dateCreated = 2))
+        dao.upsertCredential(credential("new.com", dateCreated = 30, updatedAt = 30))
+        dao.upsertCredential(credential("legacy-newer.com", dateCreated = 10))
+
+        val websites = dao.search(ALL, favoritesOnly = false, CredentialSort.MODIFIED).first().map { it.website }
+        println("MODIFIED -> $websites")
+        assertEquals(listOf("old-edited.com", "new.com", "legacy-newer.com", "legacy.com"), websites)
+    }
+
+    @Test
+    fun recentlyModifiedBreaksTiesByNewestDateCreated() = runTest {
+        dao.upsertCredential(credential("older.com", dateCreated = 1, updatedAt = 20))
+        dao.upsertCredential(credential("newer.com", dateCreated = 5, updatedAt = 20))
+
+        assertEquals(
+            listOf("newer.com", "older.com"),
+            dao.search(ALL, favoritesOnly = false, CredentialSort.MODIFIED).first().map { it.website }
+        )
+    }
+
+    @Test
+    fun favoritesOnlyCombinesWithTheSearchPatternAndSort() = runTest {
         dao.upsertCredential(credential("zeta.com", dateCreated = 1, isFav = true))
         dao.upsertCredential(credential("plain.com", dateCreated = 2))
         dao.upsertCredential(credential("alpha.com", dateCreated = 3, isFav = true))
+        dao.upsertCredential(credential("alpha-plain.com", dateCreated = 4))
 
-        assertEquals(listOf("zeta.com", "alpha.com"), dao.search(ALL, favoritesOnly = true, CredentialSort.CREATED).first().map { it.website })
-        assertEquals(listOf("alpha.com", "zeta.com"), dao.search(ALL, favoritesOnly = true, CredentialSort.WEBSITE).first().map { it.website })
+        assertEquals(listOf("zeta.com", "alpha.com"), searchWebsites("", favoritesOnly = true))
+        assertEquals(listOf("alpha.com", "zeta.com"), searchWebsites("", favoritesOnly = true, CredentialSort.WEBSITE))
+        assertEquals(listOf("alpha.com"), searchWebsites("alpha", favoritesOnly = true))
+        assertEquals(listOf("alpha.com", "alpha-plain.com"), searchWebsites("alpha", favoritesOnly = false))
+        assertEquals(emptyList<String>(), searchWebsites("plain", favoritesOnly = true))
     }
 
     @Test
@@ -152,9 +179,13 @@ class CredentialDaoTest {
         assertEquals(2, dao.getAll().size)
     }
 
-    private suspend fun searchWebsites(query: String): List<String> {
-        val websites = dao.search(likePattern(query), favoritesOnly = false, CredentialSort.CREATED).first().map { it.website }
-        println("search(\"$query\") -> $websites")
+    private suspend fun searchWebsites(
+        query: String,
+        favoritesOnly: Boolean = false,
+        sort: CredentialSort = CredentialSort.CREATED
+    ): List<String> {
+        val websites = dao.search(likePattern(query), favoritesOnly, sort).first().map { it.website }
+        println("search(\"$query\", favoritesOnly=$favoritesOnly, $sort) -> $websites")
         return websites
     }
 
@@ -162,14 +193,16 @@ class CredentialDaoTest {
         website: String,
         dateCreated: Long,
         isFav: Boolean = false,
-        username: String = "user@$website"
+        username: String = "user@$website",
+        updatedAt: Long = 0
     ) = Credential(
         website = website,
         username = username,
         password = "secret-$website",
         dataCreate = dateCreated,
         isFav = isFav,
-        note = ""
+        note = "",
+        updatedAt = updatedAt
     )
 
     private companion object {
