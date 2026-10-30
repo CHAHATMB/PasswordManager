@@ -153,7 +153,7 @@ private fun TextFields(
                     )
                     onSaved()
                 }) {
-                Text(text = "Added")
+                Text(text = "Save")
             }
         }
 
