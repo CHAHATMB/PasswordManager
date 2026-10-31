@@ -23,3 +23,4 @@
 ## Issues found
 1. **Minor (privacy/UX):** the search query survives a lock. Repro: Notes → Search → type `wifi` → power off/on → unlock → Notes tab. The search row is still open with `wifi`, and the list is filtered. The query lives in `NotesViewModel._searchText`, which the lock observer doesn't reset (only `editor` and Undo). That part dates from 11. Feature 14's `rememberSaveable(searchText.isNotEmpty())` now also reopens the row. The query isn't note text, but it can reveal what was searched. Suggest also clearing `_searchText` on lock.
 - Note: relative dates read "0 min. ago" for fresh notes (existing `DateUtils` behaviour, kept per the brief).
+- Extra proof (verify of 12–17, screenshot build at 5ab298d): `screenshots/14-notes-redesign/03-notes-grid.png` (2-column grid).

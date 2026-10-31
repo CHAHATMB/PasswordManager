@@ -20,3 +20,4 @@
 
 ## Issues found
 1. **Cosmetic:** turning Passphrase on makes the sheet taller, so the switch moves about 93 px down (y 987 → 1080). A quick second tap at the same spot misses the switch. Repro: open the generator, tap the Passphrase switch twice at the same coordinates → it stays on. This is standard bottom-sheet resizing and low impact.
+- Extra proof (verify of 12–17, screenshot build at 5ab298d): `screenshots/16-passphrase-generator/03-passphrase-on.png` (Passphrase on, 6 words, Good · 77 bits).
